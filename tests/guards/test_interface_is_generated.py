@@ -2,7 +2,7 @@
 
 It had drifted every way a hand-kept copy can: a README table that listed 8 of
 16 commands, a manifest that called `--junit` required when the command did not,
-a hint that named an option the command had lost. The reference and the gate
+a hint that named an option the command had lost. The command list and the gate
 table are now rendered from the Click tree and `services/gates.py`; this fails
 when the committed document is not what the generator writes.
 """
@@ -35,17 +35,15 @@ def test_the_committed_document_is_what_the_generator_writes() -> None:
     )
 
 
-def test_every_command_and_option_is_in_the_reference() -> None:
+def test_every_command_is_in_the_document() -> None:
     """Generated is not the same as complete: check it against the tree itself."""
-    reference = _generator().render_reference()
+    generator = _generator()
+    listed = generator.render_reference() + generator.render_gate_table()
     for group, node in main.commands.items():
         commands = node.commands.items() if isinstance(node, click.Group) else [("", node)]
-        for name, cmd in commands:
+        for name, _ in commands:
             path = f"{group} {name}".strip()
-            assert f"`{path}`" in reference, f"`{path}` is missing from the reference"
-            for param in cmd.params:
-                if isinstance(param, click.Option) and "--help" not in param.opts:
-                    assert f"`{param.opts[0]}" in reference, f"{path}: {param.opts[0]} is missing"
+            assert f"`{path}`" in listed, f"`{path}` is missing from docs/interface.md"
 
 
 def test_every_command_that_reports_has_its_shape_declared() -> None:

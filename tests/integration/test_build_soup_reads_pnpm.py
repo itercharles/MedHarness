@@ -3,7 +3,7 @@
 pnpm projects had no parser: only `package.json` ranges reached the SOUP register, never the
 versions pnpm installed. It registers the dependencies a project declares, not the whole
 transitive closure, which no one assesses one by one. Go, Cargo and Maven manifests, which no project used, were dropped; they go
-through `--from-command` like any other ecosystem.
+through a `command` source like any other ecosystem.
 """
 
 from __future__ import annotations

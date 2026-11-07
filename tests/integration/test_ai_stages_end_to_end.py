@@ -166,7 +166,7 @@ class TestBuildPlan:
         result = _run("build", "plan", "--cr", "CR-001", "--since-ref", "origin/trunk")
         report = _report(result)
         assert result.exit_code == 0, result.stderr
-        assert report["inputs"]["since_ref"] == "origin/trunk" and report["errors"] == []
+        assert report["errors"] == []
 
     def test_the_branch_origin_points_at_is_the_base_without_any_option(
         self, project: Path, tmp_path: Path,
@@ -180,7 +180,7 @@ class TestBuildPlan:
         result = _run("build", "plan", "--cr", "CR-001")
 
         assert result.exit_code == 0, result.stderr
-        assert _report(result)["inputs"]["since_ref"] == "origin/trunk"
+        assert _report(result)["errors"] == []
         changes = _run("verify", "changes", "--cr", "CR-001")
         assert "since origin/trunk" in json.loads(changes.stdout.splitlines()[0])["summary"]
 
@@ -499,7 +499,7 @@ class TestBuildCode:
 
         stages = [c["stage"] for c in _calls(project)]
         assert stages.count("code_review") == 3 and stages.count("code_fix") == 2, stages
-        assert _report(result)["diagnostics"]["code_review_verdict"] == "needs_revision"
+        assert [c["verdict"] for c in _report(result)["code_review"]["cycles"]] == ["needs_revision"] * 3
         assert "review_not_approved" in [w["code"] for w in _report(result)["warnings"]]
 
     def test_a_structural_gap_found_before_the_run_is_reported_as_a_warning(self, project: Path, tmp_path: Path) -> None:
@@ -636,12 +636,14 @@ class TestWithAPullRequest:
     ) -> None:
         _git(project, "push", "-q", "origin", "HEAD:release")
         _git(project, "fetch", "-q", "origin")
+        _git(project, "update-ref", "-d", "refs/remotes/origin/main")
         pr(base="release")
         _plan(tmp_path, design=[{"run": DESIGN}, {"run": []}], design_review=[{"run": [APPROVED_REVIEW]}])
 
         result = _run("build", "plan", "--cr", "CR-001", "--pr", "7")
 
-        assert _report(result)["inputs"]["since_ref"] == "origin/release"
+        assert result.exit_code == 0, result.stderr
+        assert _report(result)["errors"] == []
 
     def test_a_reviewer_asking_for_changes_reaches_the_model(
         self, project: Path, tmp_path: Path, pr,

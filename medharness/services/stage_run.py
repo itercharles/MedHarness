@@ -127,14 +127,6 @@ def _run_claude_step(
     return rc, output, session_id
 
 
-def _final_progress(steps: list[dict]) -> dict:
-    return {
-        "current_step": None,
-        "completed_steps": len(steps),
-        "total_steps": len(steps),
-    }
-
-
 def _determine_outcome(
     *,
     errors: list[dict],
@@ -188,19 +180,15 @@ def _build_response(
     *,
     cr_id: str,
     stage: str,
-    started_at: str,
-    started_perf: float,
-    inputs: dict,
     steps: list[dict],
     artifacts: dict,
-    diagnostics: dict,
     warnings: list[dict],
     errors: list[dict],
+    fix_attempted: bool,
     critical_step_failed: bool,
     rejected: bool = False,
 ) -> dict:
     normalized_errors = _normalize_errors(errors)
-    fix_attempted = bool(diagnostics.get("fix_attempted"))
     outcome = _determine_outcome(
         errors=normalized_errors,
         fix_attempted=fix_attempted,
@@ -218,15 +206,8 @@ def _build_response(
             fix_attempted=fix_attempted,
             warnings=warnings,
         ),
-        "timing": {
-            "started_at": started_at,
-            "elapsed_ms": int((time.perf_counter() - started_perf) * 1000),
-        },
-        "inputs": inputs,
-        "progress": _final_progress(steps),
         "steps": steps,
         "artifacts": artifacts,
-        "diagnostics": diagnostics,
         "warnings": warnings,
         "errors": normalized_errors,
     }
@@ -370,15 +351,13 @@ class Run:
     """What an AI stage carries from its first step to its answer."""
 
     def __init__(self, cr_id: str, dhf_path: Path, pr_number: int | None, since_ref: str,
-                 llms: tuple[LLMConfig, ...], diagnostics: dict) -> None:
+                 llms: tuple[LLMConfig, ...]) -> None:
         self.cr_id = cr_id
         self.dhf_path = dhf_path
         self.pr_number = pr_number
         self.since_ref = since_ref
         self.llms = llms
-        self.diagnostics = diagnostics
-        self.started_at = _now_iso()
-        self.started_perf = time.perf_counter()
+        self.fix_attempted = False
         self.repo_root = dhf_path.resolve().parent
         self.start_head = git.head(self.repo_root)
         # What was already uncommitted before the run, so only the run's own writes are judged.
@@ -388,18 +367,9 @@ class Run:
         self.unreadable: list[str] = []
         self.critical_failed = False
         self.session_id: str | None = None
-        self.inputs = {
-            "dhf_path": str(dhf_path),
-            "repo_root": str(self.repo_root),
-            "pr_number": pr_number,
-            "revision_mode": False,
-            "since_ref": since_ref,
-        }
 
     def resume_from(self, prior_session: str) -> None:
         """Note the session a revision continues; only the Anthropic CLI can."""
-        if prior_session:
-            self.diagnostics["resumed_session_id"] = prior_session
         if self.pr_number and any(llm.provider != "anthropic" for llm in self.llms):
             self.warnings.append(_warning(
                 "non_anthropic_provider_no_session",
@@ -423,7 +393,6 @@ class Run:
         self.critical_failed = self.critical_failed or (critical and rc != 0)
         if session_id:
             self.session_id = session_id
-            self.diagnostics["session_id"] = session_id
         return rc, output
 
     def items_changed(self) -> dict[str, list[str]]:
@@ -446,14 +415,11 @@ class Run:
         return _build_response(
             cr_id=self.cr_id,
             stage=stage,
-            started_at=self.started_at,
-            started_perf=self.started_perf,
-            inputs=self.inputs,
             steps=self.steps,
             artifacts=artifacts,
-            diagnostics=self.diagnostics,
             warnings=self.warnings,
             errors=errors,
+            fix_attempted=self.fix_attempted,
             critical_step_failed=self.critical_failed,
             rejected=rejected,
         )

@@ -67,10 +67,30 @@ def installed(tmp_path_factory: pytest.TempPathFactory) -> Path:
 
 # Every run is from a directory outside the checkout: `python -c` and `-m` put the working
 # directory first on the path, and from the repository that would import its source instead.
+# The command prints only the verdict, so this runs it and keeps what it was built from.
+RUN = """\
+import json, sys
+from click.testing import CliRunner
+from medharness.cli import main
+from medharness.services import validation
+
+if __name__ == "__main__":
+    seen = []
+    real = validation.build_validation
+    validation.build_validation = lambda *a, **k: seen.append(real(*a, **k)) or seen[-1]
+    result = CliRunner().invoke(main, ["build", "validation", "--out-dir", sys.argv[1]])
+    print(json.dumps({"exit": result.exit_code, "stdout": result.stdout, "stderr": result.stderr, "report": seen[0]}))
+"""
+
+
 def _validate(python: Path, out: Path) -> tuple[subprocess.CompletedProcess, dict]:
-    proc = subprocess.run([str(python), "-m", "medharness", "build", "validation", "--out-dir", str(out)],
-                          capture_output=True, text=True, cwd=out.parent, env=CLEAN)
-    return proc, ValidationReport.model_validate_json(proc.stdout).model_dump()
+    script = out.parent / "run_validation.py"
+    script.write_text(RUN, encoding="utf-8")
+    proc = subprocess.run([str(python), str(script), str(out)], capture_output=True, text=True, cwd=out.parent, env=CLEAN)
+    assert proc.returncode == 0, proc.stderr[-2000:]
+    ran = json.loads(proc.stdout)
+    ValidationReport.model_validate_json(ran["stdout"])
+    return subprocess.CompletedProcess(proc.args, ran["exit"], ran["stdout"], ran["stderr"]), ran["report"]
 
 
 @pytest.mark.dhf_links("SRS-073")

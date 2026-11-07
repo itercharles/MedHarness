@@ -167,12 +167,10 @@ def register(main):
                        "for the release role). Needs the manifest `build release --write` made.")
     @click.option("--approvers", "approvers_list", is_flag=True, default=False,
                   help="Instead, approve the current approvers list (DHF/config/approvers.yaml).")
-    @click.option("--statement", default="I have reviewed the changes to these documents and approve them for release.",
-                  show_default=True, help="What the signer states; it is signed with the approval.")
     @click.option("--yes", is_flag=True, default=False, help="Do not ask for confirmation.")
     @click.pass_context
     def item_approve(ctx: click.Context, key_path: Path, release: str | None, approvers_list: bool,
-                     statement: str, yes: bool) -> None:
+                     yes: bool) -> None:
         """Sign a release's documents, or the approvers list.
 
         With --release, shows the changes to each document the key's roles own (from the release's
@@ -205,7 +203,7 @@ def register(main):
                     click.echo(f"    {line}", err=True)
             if not yes:
                 click.confirm("Sign?", abort=True, err=True)
-            created = approve.sign(dhf_path, key_path, plan, statement)
+            created = approve.sign(dhf_path, key_path, plan)
         except (ApprovalError, DHFDataError) as e:
             raise click.ClickException(str(e)) from e
         click.echo(json.dumps(created, default=str))

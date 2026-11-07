@@ -45,25 +45,6 @@ class RunWarning(Shape):
     details: dict[str, Any] | None = Field(default=None, description="Extra facts, when the warning has any")
 
 
-class Timing(Shape):
-    started_at: str = Field(description="When the run started, ISO 8601 UTC")
-    elapsed_ms: int = Field(description="How long it took")
-
-
-class Inputs(Shape):
-    dhf_path: str = Field(description="The `--dhf` the run used")
-    repo_root: str = Field(description="The repository the DHF is in")
-    pr_number: int | None = Field(description="The `--pr` it was given, or null")
-    revision_mode: bool = Field(description="True when it revised from a reviewer's changes instead of generating")
-    since_ref: str = Field(description="What the branch is compared against")
-
-
-class Progress(Shape):
-    current_step: str | None = Field(description="The step running when the report was written, or null")
-    completed_steps: int = Field(description="Steps finished")
-    total_steps: int = Field(description="Steps in the run")
-
-
 class Step(Shape):
     name: str = Field(description="The step, e.g. `run_initial_generation`, `validate_initial`, `run_review`")
     started_at: str = Field(description="When it started, ISO 8601 UTC")
@@ -113,12 +94,7 @@ class StageReport(Shape):
                     "`tool_error` when a critical step failed; `rejected` when triage turned the CR down "
                     "(the reason is in `errors`, no design was generated). The last three exit 1")
     summary: str = Field(description="The outcome in a sentence")
-    timing: Timing = Field(description="When it started and how long it took")
-    inputs: Inputs = Field(description="What the run was given")
-    progress: Progress = Field(description="How far it got")
     steps: list[Step] = Field(description="Every step, in order")
-    diagnostics: dict[str, Any] = Field(
-        description="Models used, the session id, fix and review counts, PR feedback; the keys vary by stage")
     warnings: list[RunWarning] = Field(description="What the run noticed without failing")
     errors: list[RunError] = Field(description="Empty unless the run ended with errors")
     pr_comments: list[str] | None = Field(
@@ -205,68 +181,13 @@ class ApprovalSheetReport(Shape):
     warnings: list[str] = Field(description="What `verify approval --release` noticed, such as a signature made without proven presence")
 
 
-class InstalledFiles(Shape):
-    version: str = Field(description="The installed `medharness` version")
-    verifiable: bool = Field(description="Whether the package's own files are in its RECORD; false for an editable install")
-    files_checked: int = Field(description="Files whose hash was compared with the RECORD")
-    altered: list[str] = Field(description="Files missing or different from the RECORD; any fails the validation")
-
-
-class TestedDependency(Shape):
-    name: str = Field(description="The package")
-    tested: str = Field(description="The version the release's suite passed with")
-    marker: str | None = Field(description="The environment marker of the pin, such as `sys_platform == 'win32'`, or null")
-    installed: str | None = Field(description="The version installed here, or null")
-    status: Literal["equal", "different", "missing"] = Field(
-        description="`different` and `missing` are deviations for the user to assess; they do not fail the validation")
-
-
-class Environment(Shape):
-    platform: str = Field(description="The operating system and its version")
-    architecture: str = Field(description="The machine architecture")
-    python: str = Field(description="The Python implementation and version")
-    git: str = Field(description="`git --version`, or `not found`")
-    ssh_keygen: str = Field(description="Where `ssh-keygen` is, or `not found`")
-    pdf: str = Field(description="The WeasyPrint version, or why PDF rendering is not available")
-
-
-class ValidationPoint(Shape):
-    id: str = Field(description="The test point, e.g. `T2`")
-    text: str | None = Field(description="What the point checks, from the release's DHF; null without a release record")
-    cases: list[str] = Field(description="The validation cases that exercised it")
-    status: Literal["passed", "failed", "not_run"] = Field(
-        description="`not_run` when a tool a case needs is missing, or no case exercises the point yet")
-    message: str = Field(description="Why it failed or did not run; empty when it passed")
-
-
-class ValidatedRequirement(Shape):
-    id: str = Field(description="The requirement in MedHarness's own DHF, e.g. `SRS-016`")
-    title: str | None = Field(description="Its title; null without a release record")
-    risk: str | None = Field(description="Its risk rating; null without a release record")
-    points: list[ValidationPoint] = Field(description="Each of its test points")
-
-
-class ReleaseRecord(Shape):
-    version: str = Field(description="The release the installation was built as")
-    commit: str = Field(description="The commit the release was tagged on")
-    evidence: list[str] = Field(description="The evidence files attached to the release's GitHub Release")
-
-
 class ValidationReport(Shape):
-    """`build validation`."""
+    """`build validation`. The rest of what it found is in the report it writes."""
 
     result: Literal["passed", "failed", "incomplete"] = Field(
         description="`failed` when a point failed or an installed file differs; `incomplete` when a point did not run, "
                     "the build has no release record or the install cannot be checked. Only `passed` exits 0")
-    ran_at: str = Field(description="When it ran, ISO 8601 UTC")
     path: str | None = Field(description="The report written; null when it could not be rendered")
-    installation: InstalledFiles = Field(description="The installed files against the release")
-    dependencies: list[TestedDependency] = Field(
-        description="Each dependency the release was tested with, beside the installed version; empty without a release record")
-    environment: Environment = Field(description="Where it ran")
-    requirements: list[ValidatedRequirement] = Field(description="The result of each test point, by requirement")
-    release: ReleaseRecord | None = Field(description="The release record the package carries; null in a build that is not a release")
-    report_hash: str = Field(description="SHA-256 over the report's content, printed on the report")
     errors: list[str] = Field(description="Why the result is not `passed`")
 
 

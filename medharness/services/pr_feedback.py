@@ -16,7 +16,7 @@ def _pr_base(pr_number: int) -> str | None:
     return f"origin/{base}" if rc == 0 and base else None
 
 
-def _pr_feedback(pr_number: int, steps: list, diagnostics: dict, warnings: list) -> dict | None:
+def _pr_feedback(pr_number: int, steps: list, warnings: list) -> dict | None:
     """The PR's review feedback, or None when it has none to act on.
 
     `--pr` says the run belongs to that PR; it revises only when a reviewer has
@@ -24,7 +24,6 @@ def _pr_feedback(pr_number: int, steps: list, diagnostics: dict, warnings: list)
     """
     step, perf = _begin_step("fetch_pr_feedback")
     feedback = _get_pr_feedback(pr_number)
-    diagnostics["github_feedback"] = feedback["diagnostics"]
     warnings.extend(feedback["warnings"])
     steps.append(_finish_step(step, perf, "warning" if feedback["warnings"] else "ok",
                               feedback["diagnostics"]))

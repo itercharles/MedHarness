@@ -95,3 +95,33 @@ say it for a typical product; a project with its own copy of those files adds a
 Projects scaffolded before 0.37 carry full copies of the config and templates.
 They keep working: each copy overrides the default it duplicates. To follow the
 defaults again, delete the copies you have not changed.
+
+## What `verify impact` reads
+
+- `impact_depth` in `global.yaml` is how many typed links out from a changed item it looks for an item
+  that depends on it and was neither changed nor listed in the CR's `reviewed_items`. `0` turns that off.
+  Only item types that sit in a traceability chain count.
+- A MODULE lists the repository paths it owns in `paths` (an entry ending in `/` is a directory, any
+  other a file or glob). A file the branch changed outside the DHF then reaches the SWDD items that name
+  that module and the requirements they implement, which must be changed or listed in `reviewed_items`.
+- Once any module declares `paths`, a changed file that no module owns fails too, unless `unowned_paths`
+  in `global.yaml` exempts it (by default docs, CI workflows, Markdown, licences and lockfiles; `*` in a
+  glob also crosses directories). Until then the code check is off.
+
+## Items from another system
+
+By default every command reads one YAML file per item under `DHF/items/`, so a team whose requirements
+live in another tool exports them into that format and runs the same commands. To read the tool directly
+instead, an installed adapter is chosen with `store:` in `global.yaml` (see
+[architecture.md](architecture.md#item-adapters)); `verify changes`, `build plan` and `build code` need
+the files in Git and refuse another store.
+
+- The file is named anything ending `.yaml`; the directory under `items/` does not matter.
+- `id` is required, and its prefix (`SRS-`) picks the item type.
+- Only fields the item type declares are allowed. An undeclared one fails `verify dhf`, naming it:
+  declare it by overriding the type first.
+- A link is a field of format `relationship` or `item_multiselect`: a list of IDs pointing up the
+  V-model, each of a type the field's `target_types` accepts. `required_traceability` says which are required.
+
+`medharness verify dhf` checks an export. Renaming or removing a field the defaults declare is a breaking
+change, and the changelog says so.

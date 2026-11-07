@@ -98,7 +98,10 @@ def describe(dhf_path: Path, plan: Plan, doc_id: str) -> str:
     return changes_for(dhf_path, plan.release, doc_id) or "no change report for this document"
 
 
-def sign(dhf_path: Path, private_key: Path, plan: Plan, statement: str) -> dict:
+STATEMENT = "I have reviewed the changes to these documents and approve them for release."
+
+
+def sign(dhf_path: Path, private_key: Path, plan: Plan) -> dict:
     """Write the record into the log and sign its file; the file is not written again afterwards."""
     uid = new_ulid()
     record = {
@@ -107,7 +110,7 @@ def sign(dhf_path: Path, private_key: Path, plan: Plan, statement: str) -> dict:
         "signer": plan.approver.name,
         "roles": plan.roles,
         "signed_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "statement": statement,
+        "statement": STATEMENT,
         "documents": plan.documents,
         "key": plan.fingerprint,
     }

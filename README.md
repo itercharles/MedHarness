@@ -8,8 +8,6 @@ merges.**
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://python.org)
 
-## AI development
-
 ```mermaid
 flowchart LR
     A["<b>1 · Design</b><br/>AI drafts the design"] -->|"<b>you review</b>"| B["<b>2 · Code</b><br/>AI codes and tests"]
@@ -24,34 +22,19 @@ the design, then the code. Between them, ordinary code — never a model — che
 that the design traces, every requirement is verified, and the branch changed
 what the request said.
 
-What MedHarness gives the agent:
+`init` writes an `AGENTS.md` (and a `CLAUDE.md` that imports it) telling your
+agent when to open a change request and which commands to run; it reads and
+writes the DHF through `medharness item`, which refuses a bad edit, and the
+checks name the item and field that are wrong. What to call when is in
+[Working with your coding agent](docs/agents.md).
 
-- **The process, in its own instructions.** `init` writes an `AGENTS.md` (and a
-  `CLAUDE.md` that imports it) telling the agent when to open a change request
-  and which commands to run; `build plan --prompt` prints the exact steps and
-  this change's DHF context for whichever agent you use.
-- **Commands instead of files.** The agent reads and writes the DHF with
-  `medharness item`, which checks the schema first: a bad edit is refused, not
-  saved.
-- **Feedback it can act on.** The checks name the item and field that are
-  wrong, so the agent fixes them and runs the check again.
+Two ways to run it:
 
-How the agent and MedHarness fit together — what to call when, a skill, and two Claude Code hooks —
-is in [Working with your coding agent](docs/agents.md).
-
-Run it two ways:
-
-- **At your desk**, with the agent you already use: it does the work in your
-  working tree and you commit.
-- **Unattended**, from an issue: CI opens the change request and a pull request
-  with the design; ask for changes and it revises; the code stage runs the same
-  way. The recipe is in [the AI workflow page](docs/ai-workflow.md#wiring-it-into-github-actions).
-
-Unattended, `build plan` and `build code` run the `claude` CLI, or any
-`provider:model` you set (`anthropic`, `openai`, `deepseek`, or a local
-OpenAI-compatible endpoint such as `ollama`) — they run an agent
-with a shell, so use an ephemeral runner and read
-[ai-security.md](docs/ai-security.md) first.
+- **At your desk**, with the agent you already use: it works in your tree and you commit.
+- **Unattended**, from an issue: CI opens the change request and a pull request with
+  the design, revises on review, then does the code the same way
+  ([recipe](docs/ai-workflow.md#wiring-it-into-github-actions)). This runs an agent
+  with a shell: use an ephemeral runner and read [ai-security.md](docs/ai-security.md) first.
 
 ## Quick start
 
@@ -74,17 +57,15 @@ my-device/
 │   └── items/                   # one YAML file per item, one directory per type
 │       ├── 01_crs/CRS-001.yaml
 │       ├── 03_srs/SRS-001.yaml
-│       └── …                    # one directory per configured type
+│       └── …
 ├── AGENTS.md                    # product context and DHF steps, for any coding agent
 └── CLAUDE.md                    # @AGENTS.md, so Claude Code reads it too
 ```
 
-The item types (13 by default), their fields and lifecycles, the required links
-and the specification templates are defaults shipped in the package, so
-upgrading `medharness` upgrades them. A project overrides only what it changes,
-in `DHF/config/`: see [Changing the defaults](docs/configuration.md#changing-the-defaults).
-
-An item is a small YAML file. Links are written on the child and point up:
+The item types, their lifecycles and the specification templates ship in the
+package; a project overrides only what it changes
+([configuration.md](docs/configuration.md)). An item is a small YAML file, with
+links written on the child and pointing up:
 
 ```yaml
 id: SRS-012
@@ -95,42 +76,29 @@ testing: |
   T1: an 11-character password is rejected
 ```
 
-## Commands
-
-One CLI, four groups:
-
-```
-medharness init
-medharness item    list | get | create | update | transition
-medharness verify  dhf | tests | soup | completion | impact | changes
-medharness build   plan | code | soup | release
-```
-
-`item` reads and changes DHF items, `verify` checks and writes nothing, `build`
-produces items, code and release artifacts. Every command's options and what it
-returns are in [interface.md](docs/interface.md#command-reference); `--help` on
-any command prints the same.
-
-## Example project
+One CLI, `medharness`, in four groups: `item` reads and changes items, `verify`
+checks and writes nothing, `build` produces items, code and release artifacts,
+`init` scaffolds. What each command does, prints and exits with is in
+[interface.md](docs/interface.md); `--help` lists its options.
 
 [ContourLab](https://github.com/itercharles/ContourLab) is an example project
-used to exercise MedHarness end to end: its DHF, its CI, and changes made
-through AI development.
+used to exercise MedHarness end to end.
 
 ## Documentation
 
 | | |
 |---|---|
-| [adopting.md](docs/adopting.md) | starting fresh, bringing an existing DHF, what to adopt in what order |
-| [ci.md](docs/ci.md) | the CI recipe, cutting a release |
-| [ai-workflow.md](docs/ai-workflow.md) | a change request from design to code: your own agent, or unattended in CI |
+| [adopting.md](docs/adopting.md) | starting fresh or bringing an existing DHF |
+| [ci.md](docs/ci.md) | the CI recipe, cutting and signing a release |
+| [ai-workflow.md](docs/ai-workflow.md) | a change request from design to code |
+| [agents.md](docs/agents.md) | working with your coding agent |
 | [soup.md](docs/soup.md) | the SOUP register, SBOM, vulnerability scanning |
-| [configuration.md](docs/configuration.md) | changing the defaults, your own types and relationships |
-| [interface.md](docs/interface.md) | the gate result, exit codes, what may change |
-| [validation.md](docs/validation.md) | the tool's intended use, the risk of each command, and its own requirements and tests |
-| [ai-security.md](docs/ai-security.md) | what the AI stages can do, and running without them |
+| [configuration.md](docs/configuration.md) | changing the defaults |
+| [interface.md](docs/interface.md) | what a script or pipeline can rely on |
+| [validation.md](docs/validation.md) | the tool's own validation |
+| [ai-security.md](docs/ai-security.md) | what the AI stages can do |
 | [architecture.md](docs/architecture.md) | how the code is organised |
-| [charter.md](docs/charter.md) | what MedHarness is for, and what it does not do |
+| [charter.md](docs/charter.md) | what it is for, and what it does not do |
 | [CHANGELOG.md](CHANGELOG.md) | version history |
 
 ## License

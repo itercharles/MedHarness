@@ -67,8 +67,7 @@ class TestDevelopCrJsonContract:
         assert r.exit_code == 0, (r.output, r.stderr)
         payload = _split_stdout_json(r.stdout)
         for key in (
-            "cr_id", "stage", "outcome", "summary", "timing", "inputs",
-            "progress", "steps", "artifacts", "diagnostics", "warnings", "errors",
+            "cr_id", "stage", "outcome", "summary", "steps", "artifacts", "warnings", "errors",
         ):
             assert key in payload, f"missing {key}"
         assert payload["stage"] == "develop"

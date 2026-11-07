@@ -298,7 +298,7 @@ class TestGenerateDhf:
         assert result["stage"] == "generate_dhf"
         assert result["outcome"] == "ok"
         assert result["errors"] == []
-        for key in ("summary", "timing", "inputs", "steps", "artifacts", "diagnostics", "warnings"):
+        for key in ("summary", "steps", "artifacts", "warnings"):
             assert key in result
 
     def test_an_unreadable_diff_is_reported_and_writes_nothing_to_the_cr(self, tmp_path):
@@ -323,7 +323,7 @@ class TestGenerateDhf:
         assert not impact.called, "affected_items was written from a diff nobody could read"
         assert result["artifacts"]["items_changed"] is None
         # A fix pass is an LLM call, and no LLM can fetch a ref.
-        assert result["diagnostics"]["fix_attempted"] is False
+        assert "run_fix_generation" not in [s["name"] for s in result["steps"]]
         assert mock_claude.call_count == 2
 
     def test_happy_path_calls_claude_twice(self, tmp_path):
@@ -337,7 +337,7 @@ class TestGenerateDhf:
             mock_claude.return_value = (0, "", "")
             result = generate_dhf("CR-051", dhf)
         assert mock_claude.call_count == 2
-        assert result["diagnostics"]["fix_attempted"] is False
+        assert result["outcome"] == "ok"
 
 
     def test_design_review_loop_fixes_and_reruns_until_approved(self, tmp_path):
@@ -365,8 +365,7 @@ class TestGenerateDhf:
         assert "run_design_review" in step_names
         assert "run_design_fix_1" in step_names
         assert "run_design_review_2" in step_names
-        assert result["diagnostics"]["design_review_verdict"] == "approved"
-        assert result["diagnostics"]["design_review_cycles"] == 2
+        assert [c["verdict"] for c in result["design_review"]["cycles"]] == ["needs_revision", "approved"]
 
         fix_prompt = mock_claude.call_args_list[2][0][0]
         assert "Design-Review.md" in fix_prompt
@@ -394,7 +393,6 @@ class TestGenerateDhf:
         from medharness.services.stage_run import _MAX_DESIGN_REVIEW_CYCLES
         expected_claude_calls = 1 + (_MAX_DESIGN_REVIEW_CYCLES - 1) * 2 + 1
         assert mock_claude.call_count == expected_claude_calls
-        assert result["diagnostics"]["design_review_cycles"] == _MAX_DESIGN_REVIEW_CYCLES
         assert len(result["design_review"]["cycles"]) == _MAX_DESIGN_REVIEW_CYCLES
 
     def test_dhf_validation_reruns_after_design_review_fix(self, tmp_path):
@@ -418,7 +416,7 @@ class TestGenerateDhf:
             result = generate_dhf("CR-083", dhf)
 
         assert mock_validate.call_count == 2
-        assert result["diagnostics"]["final_error_count"] == 1
+        assert len(result["errors"]) == 1 and result["outcome"] == "completed_with_errors"
         step_names = [s["name"] for s in result["steps"]]
         assert "validate_after_review_fix_1" in step_names
 
@@ -592,7 +590,7 @@ class TestGenerateCode:
         assert result["stage"] == "develop"
         assert result["outcome"] == "ok"
         assert result["errors"] == []
-        for key in ("summary", "timing", "inputs", "progress", "steps", "artifacts", "diagnostics", "warnings"):
+        for key in ("summary", "steps", "artifacts", "warnings"):
             assert key in result, f"missing key: {key}"
         assert set(result["artifacts"]["files_changed"]) == {"created", "updated", "deleted"}
 
@@ -784,8 +782,7 @@ class TestGenerateCode:
         assert "run_review" in step_names
         assert "run_code_fix_1" in step_names
         assert "run_review_2" in step_names
-        assert result["diagnostics"]["code_review_verdict"] == "approved"
-        assert result["diagnostics"]["code_review_cycles"] == 2
+        assert [c["verdict"] for c in result["code_review"]["cycles"]] == ["needs_revision", "approved"]
 
         fix_prompt = mock_claude.call_args_list[2][0][0]
         assert "issues" in fix_prompt.lower()
@@ -810,7 +807,6 @@ class TestGenerateCode:
         # develop + (_MAX - 1) * (review + fix) + final review
         expected = 1 + (_MAX_CODE_REVIEW_CYCLES - 1) * 2 + 1
         assert mock_claude.call_count == expected
-        assert result["diagnostics"]["code_review_cycles"] == _MAX_CODE_REVIEW_CYCLES
         assert len(result["code_review"]["cycles"]) == _MAX_CODE_REVIEW_CYCLES
 
 
