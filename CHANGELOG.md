@@ -11,6 +11,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.72.2] — 2026-11-07
+
+### Fixed
+- `verify impact` and `build plan` reported `possible_duplicate` (similarity 1.00) for every new item of a type with no `title` or `content` field, such as SOUP, RISK, RCM, SWDD and MODULE. Two empty texts compared as identical. An item with no text to compare is now skipped.
+
 ## [0.72.1] — 2026-11-07
 
 ### Changed
