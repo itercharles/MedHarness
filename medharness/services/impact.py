@@ -47,11 +47,16 @@ def closest_same_type(item: dict, items: list[dict], excluded: set[str]) -> tupl
         return " ".join(f"{it.get('title', '')} {it.get('content', '')}".lower().split())
 
     mine = text(item)
+    if not mine:
+        return None
     best = None
     for other in items:
         if other["id"] == item["id"] or other["id"] in excluded or other.get("type") != item.get("type"):
             continue
-        ratio = SequenceMatcher(None, mine, text(other)).ratio()
+        theirs = text(other)
+        if not theirs:
+            continue
+        ratio = SequenceMatcher(None, mine, theirs).ratio()
         if best is None or ratio > best[1]:
             best = (other["id"], ratio)
     return best

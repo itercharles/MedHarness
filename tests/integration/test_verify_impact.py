@@ -184,3 +184,14 @@ def test_a_risk_control_of_a_changed_item_missing_from_affected_risk_items_fails
     assert any("RCM-001 controls SYS-001, which changed, but RCM-001 is not in `affected_risk_items`" in e
                for e in risk), answer["errors"]
     assert any("RISK-001 is mitigated by RCM-001" in e for e in risk), answer["errors"]
+
+
+def test_a_new_item_of_a_type_with_no_title_or_content_is_not_a_possible_duplicate(repo: Path) -> None:
+    """A SOUP item has a name and a purpose, not text to compare: nothing reads alike when nothing was read."""
+    soup = repo / "DHF" / "items" / "09_soup"
+    existing = yaml.safe_load((soup / "SOUP-001.yaml").read_text())
+    existing.pop("title"), existing.pop("content")
+    (soup / "SOUP-001.yaml").write_text(yaml.safe_dump(existing))
+    (soup / "SOUP-002.yaml").write_text(yaml.safe_dump({**existing, "id": "SOUP-002", "name": "another-library"}))
+    _, answer = _impact(repo)
+    assert not [w for w in answer["warnings"] if w.startswith("possible_duplicate")], answer["warnings"]
