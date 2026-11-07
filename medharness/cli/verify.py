@@ -153,7 +153,7 @@ def register(main):
             click.echo(f"FAIL [completion] {item['id']}: Test method declared but no passing TC linked", err=True)
         for item in details(result).get("manual_review_required", []):
             methods = ", ".join(item.get("methods", []))
-            click.echo(f"WARN [completion] {item['id']}: {methods} — requires manual sign-off record", err=True)
+            click.echo(f"WARN [completion] {item['id']}: {methods} — no test evidence, so no check here covers it", err=True)
 
         click.echo(result["summary"], err=True)
         if not result["passed"]:

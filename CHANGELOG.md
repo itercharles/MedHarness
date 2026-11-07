@@ -11,6 +11,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.72.1] — 2026-11-07
+
+### Changed
+- The warning for a requirement verified only by Inspection, Analysis or Demonstration no longer says it "needs a human sign-off record". The DHF has no field or item to hold one, so a project could never clear the warning. It now says what is true, that no test evidence covers the requirement. SRS-027 is reworded to match.
+
 ## [0.72.0] — 2026-11-07
 
 The interface and its documents, cut to what a caller or a reader uses. Each removal below is breaking; nothing else changes.

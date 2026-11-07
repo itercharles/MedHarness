@@ -25,7 +25,7 @@ def ci_test_coverage_gate(
 
     Every requirement that needs a test must have at least one passing linked test:
     one whose methods are only Inspection, Analysis or Demonstration does not, and is
-    listed for sign-off instead. If a requirement declares numbered test points in its ``testing`` field,
+    listed as verified without a test instead. If a requirement declares numbered test points in its ``testing`` field,
     each declared point must also be covered by at least one passing linked test.
     """
     from dhfkit.store import open_store
@@ -134,8 +134,8 @@ def ci_test_coverage_gate(
         for gap in methods["unverified_test"]
     ]
     warnings += [
-        f"{gap['id']}: verified by {', '.join(gap.get('methods', []))} — needs a "
-        f"human sign-off record"
+        f"{gap['id']}: verified by {', '.join(gap.get('methods', []))} — no test evidence, "
+        f"so no check here covers it"
         for gap in methods["manual_review_required"]
     ]
     if not junit_paths:
@@ -236,7 +236,7 @@ def validate_verification_completeness(
 
     - ``manual_review_required``: items that declare only non-Test methods
       (Inspection, Analysis, Demonstration). These cannot be automatically
-      verified; they are surfaced for human sign-off tracking. Not a gate
+      verified; they are listed as verified without a test. Not a gate
       failure by default.
 
     Args:
@@ -318,7 +318,7 @@ def validate_verification_completeness(
     if unverified_test:
         parts.append(f"{len(unverified_test)} unverified (Test method, no passing TC)")
     if manual_review_required:
-        parts.append(f"{len(manual_review_required)} require manual sign-off")
+        parts.append(f"{len(manual_review_required)} verified without a test")
     summary = ("PASS" if passed else "FAIL") + " — " + ", ".join(parts) if parts else "All verification checks passed."
 
     return {

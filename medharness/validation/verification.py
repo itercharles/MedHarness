@@ -108,7 +108,7 @@ def no_method_reported_without_junit(root: Path) -> None:
     _warns(result, "SRS-001: no verification_method declared")
 
 
-# --- SRS-027: Inspection, Analysis, Demonstration await sign-off ---------------------------------
+# --- SRS-027: Inspection, Analysis, Demonstration are listed, not tested ---------------------------------
 
 def inspection_needs_no_test(root: Path) -> None:
     edit(root, "SRS-001", verification_method=["Inspection"])

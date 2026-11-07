@@ -1,17 +1,18 @@
 id: SRS-027
-title: verify tests reports a requirement verified only by Inspection, Analysis or
-  Demonstration as awaiting sign-off, not as tested
+title: verify tests lists a requirement verified only by Inspection, Analysis or Demonstration
+  as verified without a test, not as tested
 risk: high
 content: '`verify tests` shall not count a requirement whose declared methods are
   only Inspection, Analysis or Demonstration as covered by a test, nor fail it for
-  having none, and shall list it for a human sign-off, so that a requirement with
-  no automatic evidence is neither hidden nor passed off as tested.'
+  having none, and shall list it with a warning that no test evidence covers it, so
+  that a requirement with no automatic evidence is neither hidden nor passed off as
+  tested.'
 verification_criteria: The requirement is absent from the covered and total counts,
-  is listed in `manual_review_required` with its methods and with a warning that it
-  needs a human sign-off, and does not make the gate fail. A requirement that declares
+  is listed in `manual_review_required` with its methods and with a warning that no
+  test evidence covers it, and does not make the gate fail. A requirement that declares
   Test as well still needs a passing linked test.
 testing: 'T1: An Inspection-only requirement needs no test: the gate passes, lists
-  it under manual_review_required and warns that it needs sign-off.
+  it under manual_review_required and warns that no test evidence covers it.
 
   T2: A requirement that declares Test and Inspection still fails without a passing
   linked test.
