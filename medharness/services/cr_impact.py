@@ -11,32 +11,20 @@ def _record_design_impact_in_cr(
     cr_id: str,
     dhf_path: Path,
     items_changed: dict[str, list[str]],
-) -> dict[str, object]:
+) -> str | None:
+    """Write the CR's `affected_items`. Returns why it could not, or None once it did."""
     try:
         adapter = open_store(dhf_path)
     except FileNotFoundError:
-        return {"recorded": False, "reason": "dhf_not_found"}
+        return f"affected_items of {cr_id} not recorded: the DHF was not found."
 
-    existing = adapter.get_item(cr_id)
-    if existing is None:
-        return {"recorded": False, "reason": "cr_item_not_found"}
+    if adapter.get_item(cr_id) is None:
+        return f"affected_items of {cr_id} not recorded: {cr_id} is not in the DHF."
 
     touched_ids: list[str] = []
     for bucket in ("created", "updated", "deleted"):
         touched_ids.extend(items_changed.get(bucket, []) or [])
-    # The CR is always in its own change set: `build plan` writes affected_risk_items,
-    # impact_analysis and implementation_notes onto it, so it shows up as an
-    # updated item and was then recorded as affecting itself. That is a
-    # one-item traceability cycle, and `verify dhf` fails on it as of 0.20.0 —
-    # so every CR the workflow planned would have failed the gate that shipped
-    # to catch broken references.
-    recorded_affected = sorted(set(touched_ids) - {cr_id})
-
-    # Only update affected_items — implementation_notes is LLM-authored
-    # during `build plan` and must not be overwritten by the harness.
-    adapter.update_item(cr_id, {"affected_items": recorded_affected})
-    return {
-        "recorded": True,
-        "reason": "updated",
-        "affected_items": recorded_affected,
-    }
+    # `build plan` writes impact_analysis onto the CR, so the CR is in its own change set;
+    # recording it would be a one-item traceability cycle that `verify dhf` fails on.
+    adapter.update_item(cr_id, {"affected_items": sorted(set(touched_ids) - {cr_id})})
+    return None

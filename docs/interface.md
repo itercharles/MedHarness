@@ -136,7 +136,7 @@ An item is its file's fields plus `type` (the item type's code), `file_path`, an
 `build` commands do not answer with the envelope; each answers with its own report.
 
 - **`build plan` and `build code`** exit `1` when the `outcome` is `completed_with_errors`, `tool_error` or `rejected`. Their execution boundary is in [ai-security.md](ai-security.md).
-- **`build soup`** always writes the SOUP items in the working tree. Exit `1` on `completed_with_errors`.
+- **`build soup`** always writes the SOUP items in the working tree. Exit `1` when `errors` is not empty.
 - **`build release`** exits `1` when any check failed; a failing release still writes its evidence to `--out-dir`, so you can read why, but records no REL item.
 - **`build approvals`** runs `verify approval --release` first and exits `1` when it fails, writing no sheet.
 - **`build validation`** runs the validation set that ships in the package against scratch projects; it reads no DHF, and `--dhf` is ignored. It answers with the verdict and the path of the report it wrote, which holds the rest. It exits `1` unless `result` is `passed`. See [adopting.md](adopting.md#validating-your-installation).
@@ -164,8 +164,7 @@ An item is its file's fields plus `type` (the item type's code), `file_path`, an
 | `name` | string | The step, e.g. `run_initial_generation`, `validate_initial`, `run_review` |
 | `started_at` | string | When it started, ISO 8601 UTC |
 | `elapsed_ms` | integer | How long it took |
-| `outcome` | string | `ok`, `warning` or `error` |
-| `details` | object | Facts about the step; the keys vary by step |
+| `outcome` | string | `ok`, `warning` or `failed` |
 
 `RunWarning`:
 
@@ -189,7 +188,6 @@ An item is its file's fields plus `type` (the item type's code), `file_path`, an
 | Field | Type | Meaning |
 |---|---|---|
 | `items_changed` | `ChangeSet` or null | The DHF items changed on the branch, the CR's whole change set; null when the diff could not be read |
-| `design_impact` | `DesignImpact` or null | The CR's `affected_items` write-back |
 
 `Review`:
 
@@ -205,14 +203,6 @@ An item is its file's fields plus `type` (the item type's code), `file_path`, an
 | `created` | list of strings | Created since `since_ref`, committed or not |
 | `updated` | list of strings | Modified since `since_ref` |
 | `deleted` | list of strings | Deleted since `since_ref` |
-
-`DesignImpact`:
-
-| Field | Type | Meaning |
-|---|---|---|
-| `recorded` | boolean | Whether the CR's `affected_items` was written |
-| `reason` | string | Why or why not, e.g. `updated` |
-| `affected_items` | list of strings or null | The items recorded, when they were |
 
 `ReviewCycle`:
 
@@ -258,16 +248,13 @@ An item is its file's fields plus `type` (the item type's code), `file_path`, an
 
 | Field | Type | Meaning |
 |---|---|---|
-| `outcome` | `completed` · `completed_with_errors` | `completed_with_errors` exits 1 |
 | `manifests_parsed` | list of strings | The manifests it read |
 | `packages_found` | integer | Packages across them |
-| `to_create` | list of strings | Packages with no SOUP item |
 | `to_update` | list of `SoupDrift` | SOUP items whose version has drifted |
 | `orphans` | list of `SoupOrphan` | SOUP items no manifest resolves |
 | `matched_count` | integer | Packages that already have a matching SOUP item |
 | `items_created` | list of strings | SOUP items it wrote, in the working tree |
-| `items_updated` | list of strings | SOUP items it changed, in the working tree |
-| `errors` | list of strings | Manifests or commands that could not be read |
+| `errors` | list of strings | Manifests or commands that could not be read; any exits 1 |
 
 `SoupDrift`:
 

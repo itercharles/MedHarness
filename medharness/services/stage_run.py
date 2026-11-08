@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from medharness.services import git
-from medharness.services.llm import LLMConfig, _model_label, _resume_unavailable, _run_llm
+from medharness.services.llm import LLMConfig, _resume_unavailable, _run_llm
 
 
 _MAX_DESIGN_REVIEW_CYCLES = 3
@@ -45,21 +45,13 @@ def _normalize_errors(errors: list[dict]) -> list[dict]:
     return normalized
 
 
-def _begin_step(name: str, details: dict | None = None) -> tuple[dict, float]:
-    return {
-        "name": name,
-        "started_at": _now_iso(),
-        "details": dict(details or {}),
-    }, time.perf_counter()
+def _begin_step(name: str) -> tuple[dict, float]:
+    return {"name": name, "started_at": _now_iso()}, time.perf_counter()
 
 
-def _finish_step(step: dict, started_perf: float, outcome: str, details: dict | None = None) -> dict:
-    merged = dict(step.get("details") or {})
-    if details:
-        merged.update(details)
+def _finish_step(step: dict, started_perf: float, outcome: str) -> dict:
     step["outcome"] = outcome
     step["elapsed_ms"] = int((time.perf_counter() - started_perf) * 1000)
-    step["details"] = merged
     return step
 
 
@@ -83,8 +75,7 @@ def _run_claude_step(
     """Run an LLM step. Returns (exit_code, output, session_id)."""
     config = llm_config or LLMConfig()
     is_anthropic = config.provider == "anthropic"
-    tool_label = "claude" if is_anthropic else _model_label(config)
-    step, step_perf = _begin_step(name, {"tool": tool_label})
+    step, step_perf = _begin_step(name)
     rc, output, session_id = _run_llm(prompt, config=config, resume_session=resume_session)
 
     # A session lives on the machine that created it, so a CI runner can never
@@ -97,16 +88,7 @@ def _run_claude_step(
 
     cli_found = "claude CLI not found" not in output if is_anthropic else True
     outcome = "ok" if rc == 0 else ("failed" if critical else "warning")
-    details: dict[str, object] = {"exit_code": rc, "cli_found": cli_found}
-    if session_id:
-        details["session_id"] = session_id
-    if resume_session:
-        details["resumed_session_id"] = resume_session
-    if resume_dropped:
-        details["resume_unavailable"] = True
-    if output.strip():
-        details["output_excerpt"] = _truncate(output)
-    steps.append(_finish_step(step, step_perf, outcome, details))
+    steps.append(_finish_step(step, step_perf, outcome))
     if resume_dropped:
         warnings.append(
             _warning(
@@ -117,11 +99,14 @@ def _run_claude_step(
             )
         )
     if rc != 0:
+        failure = {"step": name, "exit_code": rc}
+        if output.strip():
+            failure["output_excerpt"] = _truncate(output)
         warnings.append(
             _warning(
                 "claude_cli_missing" if (is_anthropic and not cli_found) else "claude_step_failed",
                 f"Step `{name}` exited with code {rc}.",
-                {"step": name, "exit_code": rc},
+                failure,
             )
         )
     return rc, output, session_id

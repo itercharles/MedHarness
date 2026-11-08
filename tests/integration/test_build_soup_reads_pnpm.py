@@ -78,7 +78,7 @@ def test_a_lockfile_pnpm_no_longer_writes_is_an_error_not_a_guess(project: Path)
 
     result, answer = _soup(project, "--manifest", str(project / "pnpm-lock.yaml"))
 
-    assert result.exit_code == 1 and answer["outcome"] == "completed_with_errors"
+    assert result.exit_code == 1 and answer["errors"]
     assert any("lockfileVersion 5.4" in e for e in answer["errors"]), answer["errors"]
 
 

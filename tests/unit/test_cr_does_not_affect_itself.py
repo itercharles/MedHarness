@@ -38,13 +38,11 @@ def dhf(tmp_path: Path) -> Path:
 class TestTheCrIsExcludedFromItsOwnImpact:
     def test_a_change_set_containing_the_cr_does_not_record_it(self, dhf: Path) -> None:
         """The real shape: `build plan` updates the CR, so it is in `updated`."""
-        result = _record_design_impact_in_cr(
+        assert _record_design_impact_in_cr(
             "CR-001", dhf,
             {"created": ["SRS-020"], "updated": ["CR-001", "SYS-001"], "deleted": []},
-        )
-        assert result["recorded"] is True
-        assert "CR-001" not in result["affected_items"]
-        assert result["affected_items"] == ["SRS-020", "SYS-001"]
+        ) is None
+        assert open_store(dhf).get_item("CR-001")["affected_items"] == ["SRS-020", "SYS-001"]
 
     def test_the_stored_item_matches(self, dhf: Path) -> None:
         _record_design_impact_in_cr(
@@ -54,18 +52,24 @@ class TestTheCrIsExcludedFromItsOwnImpact:
 
     def test_other_items_are_still_recorded(self, dhf: Path) -> None:
         """Excluding the CR must not exclude anything else."""
-        result = _record_design_impact_in_cr(
+        _record_design_impact_in_cr(
             "CR-001", dhf,
             {"created": ["SRS-020"], "updated": ["SYS-001"], "deleted": ["SWDD-009"]},
         )
-        assert result["affected_items"] == ["SRS-020", "SWDD-009", "SYS-001"]
+        assert open_store(dhf).get_item("CR-001")["affected_items"] == ["SRS-020", "SWDD-009", "SYS-001"]
 
     def test_another_cr_is_not_excluded(self, dhf: Path) -> None:
         """Only *this* CR. A CR genuinely touching another one still records it."""
-        result = _record_design_impact_in_cr(
+        _record_design_impact_in_cr(
             "CR-001", dhf, {"created": [], "updated": ["CR-001", "CR-002"], "deleted": []},
         )
-        assert result["affected_items"] == ["CR-002"]
+        assert open_store(dhf).get_item("CR-001")["affected_items"] == ["CR-002"]
+
+
+class TestAnImpactThatCannotBeRecordedSaysWhy:
+    def test_a_cr_that_is_not_in_the_dhf(self, dhf: Path) -> None:
+        reason = _record_design_impact_in_cr("CR-404", dhf, {"created": ["SRS-020"], "updated": [], "deleted": []})
+        assert reason is not None and "CR-404 is not in the DHF" in reason
 
 
 class TestTheResultPassesTheGateThatCaughtIt:

@@ -16,6 +16,7 @@ import pytest
 from click.testing import CliRunner
 
 from dhfkit.tests.fixtures import bare_dhf
+from dhfkit.store import open_store
 from medharness.cli import main
 
 
@@ -28,6 +29,11 @@ def project(tmp_path: Path) -> Path:
 def _soup(project: Path, *args: str):
     result = CliRunner().invoke(main, ["--dhf", str(project / "DHF"), "build", "soup", *args])
     return result, json.loads(result.stdout.splitlines()[0])
+
+
+def _registered(project: Path, answer: dict) -> list[str]:
+    store = open_store(project / "DHF")
+    return sorted(store.get_item(uid)["name"] for uid in answer["items_created"])
 
 
 @pytest.mark.dhf_links("SRS-069")
@@ -43,7 +49,7 @@ def test_a_scoped_npm_package_keeps_its_scope(project: Path) -> None:
     result, answer = _soup(project)
 
     assert result.exit_code == 0, answer["errors"]
-    assert sorted(answer["to_create"]) == ["@babel/core", "@types/node", "express"]
+    assert _registered(project, answer) == ["@babel/core", "@types/node", "express"]
 
 
 @pytest.mark.dhf_links("SRS-069")
@@ -58,7 +64,7 @@ def test_the_project_a_uv_lockfile_lists_is_not_soup(project: Path) -> None:
     result, answer = _soup(project)
 
     assert result.exit_code == 0, answer["errors"]
-    assert answer["to_create"] == ["requests"]
+    assert _registered(project, answer) == ["requests"]
 
 
 @pytest.mark.dhf_links("SRS-070")
@@ -100,7 +106,7 @@ def test_a_package_at_two_versions_is_checked_at_both(project: Path) -> None:
     result, answer = _soup(project, *manifests)
     assert result.exit_code == 1
     assert any("requests ships at 2.33.0" in e and "2.19.0" in e for e in answer["errors"]), answer["errors"]
-    assert answer["items_created"] == [] and answer["items_updated"] == []
+    assert answer["items_created"] == [] and answer["to_update"] == []
 
     (project / "fe" / "requirements.txt").write_text("requests==2.33.0\n")
     _soup(project, "--manifest", str(project / "be" / "requirements.txt"))

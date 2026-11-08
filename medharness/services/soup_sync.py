@@ -492,9 +492,6 @@ def diff_against_dhf(
     to_create: list[dict] = []
     to_update: list[dict] = []
     matched: list[dict] = []
-    # Items expose "id". The artifact keys below stay "uid" because existing
-    # consumers read them — the same split release-baseline makes. Reading
-    # item["uid"] was simply wrong, and crashed the sync on every real DHF.
     matched_item_ids: set[str] = set()
 
     for pkg in packages:
@@ -527,8 +524,6 @@ def diff_against_dhf(
 def collect_manifest_packages(
     dhf: Path,
     manifest_paths: list[Path] | None = None,
-    *,
-    use_sources_file: bool = True,
 ) -> tuple[list[dict], list[str], list[str]]:
     """Every package the project's manifests resolve, deduplicated by name.
 
@@ -554,7 +549,7 @@ def collect_manifest_packages(
 
     # 2. soup-sources.yaml (when no explicit sources given)
     if not manifest_paths:
-        if use_sources_file and config_file(dhf, "soup-sources.yaml"):
+        if config_file(dhf, "soup-sources.yaml"):
             src_pkgs, src_errors = load_soup_sources(dhf, project_dir)
             packages.extend(src_pkgs)
             errors.extend(src_errors)
@@ -585,25 +580,18 @@ def collect_manifest_packages(
     return packages, manifests_parsed, errors
 
 
-def sync_soup_items(
-    dhf: Path,
-    manifest_paths: list[Path],
-    *,
-    use_sources_file: bool = True,
-) -> dict:
+def sync_soup_items(dhf: Path, manifest_paths: list[Path]) -> dict:
     """Parse manifests, diff against DHF SOUP items, and write the changes.
 
     Source priority (highest wins on name collision):
     1. Explicit ``manifest_paths``
-    2. ``DHF/config/soup-sources.yaml`` (when ``use_sources_file=True``)
+    2. ``DHF/config/soup-sources.yaml``
     3. Auto-discovery of manifest files in the project root (when all above
        are empty and no sources file is present)
 
-    Returns a structured result dict with outcome and counts.
+    Returns what was written and what could not be reconciled; any ``errors`` fail the command.
     """
-    packages, manifests_parsed, errors = collect_manifest_packages(
-        dhf, list(manifest_paths), use_sources_file=use_sources_file,
-    )
+    packages, manifests_parsed, errors = collect_manifest_packages(dhf, list(manifest_paths))
 
     soup_items: list[dict] = []
     store = None
@@ -614,71 +602,60 @@ def sync_soup_items(
         errors.append(f"Failed to list SOUP items: {exc}")
 
     diff = diff_against_dhf(packages, soup_items)
-    # One SOUP item records one version; writing would flip it between the two on every run.
-    versions: dict[tuple[str, str], list[dict]] = {}
+    # One SOUP item records one version, so a package shipping at two is left alone, not flipped on every run.
+    by_package: dict[tuple[str, str], list[dict]] = {}
     for pkg in packages:
-        versions.setdefault((str(pkg.get("ecosystem") or "").lower(), _normalize_name(pkg["name"])), []).append(pkg)
-    several = {name for (_eco, name), pkgs in versions.items() if len(pkgs) > 1}
-    for key in [k for k, pkgs in versions.items() if len(pkgs) <= 1]:
-        del versions[key]
-    for pkgs in versions.values():
+        by_package.setdefault((str(pkg.get("ecosystem") or "").lower(), _normalize_name(pkg["name"])), []).append(pkg)
+    twice = {key: pkgs for key, pkgs in by_package.items() if len(pkgs) > 1}
+    for pkgs in twice.values():
         errors.append(
             f"{pkgs[0]['name']} ships at " + " and ".join(f"{p['version']} ({p.get('source') or '?'})" for p in pkgs)
             + "; one SOUP item records one version — align the manifests, or register each version itself"
         )
+    several = {name for _eco, name in twice}
     diff["to_create"] = [p for p in diff["to_create"] if _normalize_name(p["name"]) not in several]
     diff["to_update"] = [e for e in diff["to_update"] if _normalize_name(e["pkg"]["name"]) not in several]
     if store is None:
-        # The register could not be read, so "no SOUP item for this package" proves nothing.
         diff["to_create"] = diff["to_update"] = []
 
     items_created: list[str] = []
-    items_updated: list[str] = []
-
     for pkg in diff["to_create"]:
         try:
-            data = {
+            new_item = store.create_item({
                 "type": "SOUP",
                 "name": pkg["name"],
                 "version": pkg["version"],
                 "ecosystem": pkg.get("ecosystem") or "",
                 "manufacturer": pkg.get("manufacturer") or "",
-                # Left empty on purpose. §8.1.2 asks why a component is
-                # used; "Dependency from PyPI" answers nothing and would
-                # make the register look complete while saying nothing.
-                # `verify soup` reports the gap until a person fills it.
+                # Empty on purpose: a generic purpose would make the register look complete while
+                # saying nothing, and `verify soup` reports the gap until a person fills it.
                 "purpose": "",
                 "license": "",
                 "source": pkg.get("source") or "",
-            }
-            new_item = store.create_item(data)
+            })
             items_created.append(new_item["id"])
         except Exception as exc:
             errors.append(f"Failed to create SOUP item for {pkg['name']}: {exc}")
 
+    updated: list[dict] = []
     for entry in diff["to_update"]:
-        pkg = entry["pkg"]
         item = entry["item"]
         try:
-            store.update_item(item["id"], {"version": pkg["version"]})
-            items_updated.append(item["id"])
+            store.update_item(item["id"], {"version": entry["pkg"]["version"]})
+            updated.append(entry)
         except Exception as exc:
             errors.append(f"Failed to update {item['id']}: {exc}")
 
-    outcome = "completed_with_errors" if errors else "completed"
     return {
-        "outcome": outcome,
         "manifests_parsed": manifests_parsed,
         "packages_found": len(packages),
-        "to_create": [p["name"] for p in diff["to_create"]],
         "to_update": [
             {"uid": e["item"]["id"], "name": e["pkg"]["name"],
              "old_version": e["old_version"], "new_version": e["pkg"]["version"]}
-            for e in diff["to_update"]
+            for e in updated
         ],
         "orphans": [{"uid": it["id"], "name": it.get("name", "")} for it in diff["orphans"]],
         "matched_count": len(diff["matched"]),
         "items_created": items_created,
-        "items_updated": items_updated,
         "errors": errors,
     }

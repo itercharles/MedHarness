@@ -25,8 +25,7 @@ def _pr_feedback(pr_number: int, steps: list, warnings: list) -> dict | None:
     step, perf = _begin_step("fetch_pr_feedback")
     feedback = _get_pr_feedback(pr_number)
     warnings.extend(feedback["warnings"])
-    steps.append(_finish_step(step, perf, "warning" if feedback["warnings"] else "ok",
-                              feedback["diagnostics"]))
+    steps.append(_finish_step(step, perf, "warning" if feedback["warnings"] else "ok"))
     said = feedback["diagnostics"]["comments_count"] + feedback["diagnostics"]["reviews_count"]
     return feedback if said else None
 

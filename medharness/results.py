@@ -49,20 +49,13 @@ class Step(Shape):
     name: str = Field(description="The step, e.g. `run_initial_generation`, `validate_initial`, `run_review`")
     started_at: str = Field(description="When it started, ISO 8601 UTC")
     elapsed_ms: int = Field(description="How long it took")
-    outcome: str = Field(description="`ok`, `warning` or `error`")
-    details: dict[str, Any] = Field(description="Facts about the step; the keys vary by step")
+    outcome: str = Field(description="`ok`, `warning` or `failed`")
 
 
 class ChangeSet(Shape):
     created: list[str] = Field(description="Created since `since_ref`, committed or not")
     updated: list[str] = Field(description="Modified since `since_ref`")
     deleted: list[str] = Field(description="Deleted since `since_ref`")
-
-
-class DesignImpact(Shape):
-    recorded: bool = Field(description="Whether the CR's `affected_items` was written")
-    reason: str = Field(description="Why or why not, e.g. `updated`")
-    affected_items: list[str] | None = Field(default=None, description="The items recorded, when they were")
 
 
 class ReviewCycle(Shape):
@@ -79,7 +72,6 @@ class Review(Shape):
 class PlanArtifacts(Shape):
     items_changed: ChangeSet | None = Field(
         description="The DHF items changed on the branch, the CR's whole change set; null when the diff could not be read")
-    design_impact: DesignImpact | None = Field(default=None, description="The CR's `affected_items` write-back")
 
 
 class CodeArtifacts(Shape):
@@ -141,17 +133,13 @@ class SoupOrphan(Shape):
 class SoupReport(Shape):
     """`build soup`."""
 
-    outcome: Literal["completed", "completed_with_errors"] = Field(
-        description="`completed_with_errors` exits 1")
     manifests_parsed: list[str] = Field(description="The manifests it read")
     packages_found: int = Field(description="Packages across them")
-    to_create: list[str] = Field(description="Packages with no SOUP item")
     to_update: list[SoupDrift] = Field(description="SOUP items whose version has drifted")
     orphans: list[SoupOrphan] = Field(description="SOUP items no manifest resolves")
     matched_count: int = Field(description="Packages that already have a matching SOUP item")
     items_created: list[str] = Field(description="SOUP items it wrote, in the working tree")
-    items_updated: list[str] = Field(description="SOUP items it changed, in the working tree")
-    errors: list[str] = Field(description="Manifests or commands that could not be read")
+    errors: list[str] = Field(description="Manifests or commands that could not be read; any exits 1")
 
 
 class ReleaseReport(Shape):

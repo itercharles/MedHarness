@@ -103,6 +103,6 @@ class TestTheCommandSourceRunsForReal:
         )
         r = CliRunner().invoke(main, ["--dhf", str(dhf), "build", "soup"])
         payload = json.loads(r.stdout.splitlines()[0])
-        assert payload["outcome"] == "completed", payload["errors"]
+        assert r.exit_code == 0, payload["errors"]
         assert payload["packages_found"] == 1
         assert len(payload["items_created"]) == 1
