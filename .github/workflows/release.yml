@@ -11,7 +11,7 @@ on:
 
 jobs:
   preflight:
-    name: Release preflight checks
+    name: Release 1 of 3 - tag, version, changelog and PyPI checks
     runs-on: ubuntu-24.04
     # Read-only: preflight inspects the tag, pyproject, changelog, and PyPI.
     # Declared explicitly so the job cannot inherit a broader default.
@@ -84,7 +84,7 @@ jobs:
           echo "PyPI check passed: $PACKAGE $VERSION not yet published."
 
   tests:
-    name: Test the tagged source
+    name: Release 2 of 3 - full test suite on the tagged source
     needs: preflight
     runs-on: ubuntu-24.04
     # Read-only: the suite runs against the tag and nothing is written back.
@@ -166,7 +166,7 @@ jobs:
           if-no-files-found: error
 
   build-and-publish:
-    name: Build and publish wheel
+    name: Release 3 of 3 - build and publish to PyPI
     needs: [preflight, tests]
     runs-on: ubuntu-24.04
     permissions:
