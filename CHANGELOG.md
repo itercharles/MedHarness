@@ -11,6 +11,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.73.1] — 2026-11-08
+
+### Fixed
+- 0.73.0 was tagged but never published: its release run failed `tests/guards/test_no_dead_helpers.py`, because removing the step details left `_model_label` with no caller. The helper is deleted, and 0.73.0's changes ship in this release.
+
 ## [0.73.0] — 2026-11-08
 
 What a script cannot use is no longer reported. Each removal below is breaking.

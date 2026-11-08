@@ -63,12 +63,6 @@ def _resolve_stage_llm(stage: str) -> LLMConfig:
     return LLMConfig(provider=provider, model=model, api_key=api_key, base_url=base_url)
 
 
-def _model_label(config: LLMConfig) -> str:
-    if config.model:
-        return f"{config.provider}:{config.model}"
-    return config.provider
-
-
 # A tool result is resent on every later turn; one large file would crowd out the context.
 _MAX_TOOL_OUTPUT = 20_000
 
