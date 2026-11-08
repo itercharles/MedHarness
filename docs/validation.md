@@ -46,7 +46,7 @@ medharness --dhf DHF verify dhf --strict
 medharness --dhf DHF verify tests --strict --junit test-results/junit.xml
 ```
 
-CI runs exactly this in the job `Check | Own DHF`. The DHF is not part of the package: the wheel and the source distribution contain only `medharness` and `dhfkit`. To change a requirement, use `medharness --dhf DHF item create|update`, never the files; a change to behaviour changes its item and its test points in the same pull request.
+CI runs exactly this in the job `Own DHF - all tests pass, every requirement verified`. The DHF is not part of the package: the wheel and the source distribution contain only `medharness` and `dhfkit`. To change a requirement, use `medharness --dhf DHF item create|update`, never the files; a change to behaviour changes its item and its test points in the same pull request.
 
 ## What is covered
 

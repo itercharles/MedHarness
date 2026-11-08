@@ -11,6 +11,9 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Changed
+- The CI and release jobs are named for what they check ("Lockfile - uv.lock matches pyproject.toml", "Release 2 of 3 - full test suite on the tagged source") instead of "Check | Lockfile", "Test the tagged source". Nothing requires a check by name, so no setting needed changing.
+
 ## [0.73.1] — 2026-11-08
 
 ### Fixed

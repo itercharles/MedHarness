@@ -1,4 +1,4 @@
-name: CI Pipeline
+name: CI
 
 # MedHarness's own CI — layer-based gates:
 #
@@ -21,7 +21,7 @@ jobs:
   # ── LAYER-BASED TESTING ──────────────────────────────────────────────────
 
   tests-unit:
-    name: Test | Unit
+    name: Unit tests
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -49,7 +49,7 @@ jobs:
           pytest tests/unit/ tests/guards/ -n auto
 
   tests-integration:
-    name: Test | Integration
+    name: Integration tests
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -74,7 +74,7 @@ jobs:
           pytest tests/integration/ -n auto
 
   tests-contract:
-    name: Test | Contract
+    name: Contract tests
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -93,7 +93,7 @@ jobs:
           pytest tests/contract/ -v
 
   tests-dhf-util:
-    name: Test | dhfkit Engine
+    name: dhfkit engine tests
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -116,7 +116,7 @@ jobs:
   # MedHarness's own requirements (DHF/, docs/validation.md): every test point of every
   # requirement needs a passing test, from the whole suite.
   check-own-dhf:
-    name: Check | Own DHF
+    name: Own DHF - all tests pass, every requirement verified
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -147,7 +147,7 @@ jobs:
   # ── COMPATIBILITY CHECKS ─────────────────────────────────────────────────
 
   check-scaffold:
-    name: Check | Scaffold
+    name: Scaffold - init writes the expected files
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -181,7 +181,7 @@ jobs:
           "
 
   check-starter:
-    name: Check | Starter DHF
+    name: Starter project - verifies, release refused until sample text is replaced
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -228,7 +228,7 @@ jobs:
           "
 
   check-cli-entrypoints:
-    name: Check | CLI Entrypoints
+    name: CLI starts - medharness and python -m medharness
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -249,7 +249,7 @@ jobs:
   # ── LOCKFILE ──────────────────────────────────────────────────────────────
 
   check-lockfile:
-    name: Check | Lockfile
+    name: Lockfile - uv.lock matches pyproject.toml
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
