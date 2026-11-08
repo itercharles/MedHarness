@@ -11,6 +11,18 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.73.0] — 2026-11-08
+
+What a script cannot use is no longer reported. Each removal below is breaking.
+
+### Removed
+- `build plan` and `build code` no longer report `steps[].details`. The document called its keys "vary by step", so no caller could depend on one, and nothing read them back. What a run found is in `warnings` and `errors`; a failed model call's `claude_step_failed` warning now carries the tool's output (`output_excerpt`), the one fact only the step held. Step names that encoded a choice now say it: `prepare_prompt` is `prepare_generation_prompt` or `prepare_revision_prompt`, and the `collect_artifacts` step, which only held what `artifacts` already reports, is gone.
+- `build plan` no longer reports `artifacts.design_impact`. The CR's `affected_items` is in the CR; a write that could not be made is now a warning, `affected_items_not_recorded`, in `build plan` and in `build code`, which ignored the failure before.
+- `build soup` no longer reports `outcome`, `to_create` or `items_updated`. `outcome` was `errors` restated, and the exit code is `1` when `errors` is not empty. `items_created` names what it wrote, and `to_update` names each item whose version it changed, with the old and new version.
+
+### Fixed
+- The `Step.outcome` documentation listed `error`; a failed step reports `failed`.
+
 ## [0.72.2] — 2026-11-07
 
 ### Fixed

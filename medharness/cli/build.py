@@ -342,15 +342,12 @@ def register(main):
 
         result = sync_soup_items(ctx.obj["dhf"], list(manifest_paths))
         click.echo(json.dumps(result))
-        written = (f" ({len(result.get('items_created', []))} created, "
-                   f"{len(result.get('items_updated', []))} updated)")
         click.echo(
-            f"OK build soup{written}: +{len(result.get('to_create') or [])} new, "
-            f"~{len(result.get('to_update') or [])} drift, "
-            f"{len(result.get('orphans') or [])} orphan(s), "
-            f"{result.get('matched_count', 0)} matched.", err=True,
+            f"{'FAIL' if result['errors'] else 'OK'} build soup: {len(result['items_created'])} created, "
+            f"{len(result['to_update'])} updated, {len(result['orphans'])} orphan(s), "
+            f"{result['matched_count']} matched.", err=True,
         )
-        if result.get("outcome") == "completed_with_errors":
-            for err in result.get("errors") or []:
-                click.echo(f"  FAIL: {err}", err=True)
+        for err in result["errors"]:
+            click.echo(f"  FAIL: {err}", err=True)
+        if result["errors"]:
             sys.exit(1)

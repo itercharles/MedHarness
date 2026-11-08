@@ -82,7 +82,6 @@ class TestTheFallback:
         _rc, _out, _sid, steps, warnings = _step(
             [], [(1, GONE, ""), (0, "done", "new-session")]
         )
-        assert steps[-1]["details"]["resume_unavailable"] is True
         assert any(w["code"] == "resume_session_unavailable" for w in warnings)
 
     def test_a_real_failure_is_not_retried(self) -> None:
@@ -95,6 +94,12 @@ class TestTheFallback:
         assert rc == 1
         assert steps[-1]["outcome"] == "failed"
         assert any(w["code"] == "claude_step_failed" for w in warnings)
+
+    def test_a_failed_step_carries_what_the_tool_said(self) -> None:
+        """The step has no detail of its own; the warning is the only place the cause can be read."""
+        _rc, _out, _sid, _steps, warnings = _step([], [(1, "Error: rate limit exceeded", "")])
+        failed = next(w for w in warnings if w["code"] == "claude_step_failed")
+        assert failed["details"]["output_excerpt"] == "Error: rate limit exceeded"
 
     def test_a_lost_session_that_fails_again_still_fails(self) -> None:
         calls: list[str] = []

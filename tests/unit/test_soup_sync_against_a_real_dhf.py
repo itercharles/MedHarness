@@ -47,7 +47,7 @@ class TestItRunsAtAll:
     @pytest.mark.dhf_testing("T1")
     def test_writing_creates_items(self, project: Path) -> None:
         result = _sync(project)
-        assert result["outcome"] == "completed"
+        assert result["errors"] == []
         assert len(result["items_created"]) == 2
         assert all(i.startswith("SOUP-") for i in result["items_created"]), \
             result["items_created"]
@@ -58,7 +58,7 @@ class TestItRunsAtAll:
         """The path that read item["uid"] and crashed on every existing item."""
         _sync(project)
         again = _sync(project)
-        assert again["to_create"] == []
+        assert again["items_created"] == []
         assert again["matched_count"] == 2
 
     def test_a_drifted_version_is_reported(self, project: Path) -> None:
@@ -74,7 +74,7 @@ class TestItRunsAtAll:
         (project / "requirements.txt").write_text("flask==3.1.0\nnumpy==1.26.0\n")
         result = _sync(project)
         flask = next(it for it in open_store(project / "DHF").list_items("SOUP") if it["name"] == "flask")
-        assert result["items_updated"] == [flask["id"]]
+        assert [e["uid"] for e in result["to_update"]] == [flask["id"]]
         assert flask["version"] == "3.1.0"
 
     @pytest.mark.dhf_links("SRS-068")

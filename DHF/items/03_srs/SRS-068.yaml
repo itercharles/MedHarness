@@ -8,7 +8,7 @@ content: '`build soup` shall create a SOUP item for each package the manifests l
   what ships.'
 verification_criteria: '`items_created` names a new SOUP item per new package; a second
   run creates nothing and counts the packages as matched; after a version changes
-  in the manifest, `items_updated` names the item and the item records the new version;
+  in the manifest, `to_update` names the item and the item records the new version;
   an item no manifest resolves is listed in `orphans`. The exit code is 0.'
 testing: 'T1: Packages with no SOUP item get one each.
 

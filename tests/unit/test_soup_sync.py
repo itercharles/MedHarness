@@ -245,7 +245,8 @@ class TestSyncSoupItems:
             result = sync_soup_items(tmp_path / "DHF", [req])
 
         mock_update.assert_called_once_with("SOUP-001", {"version": "8.1.7"})
-        assert result["items_updated"] == ["SOUP-001"]
+        assert result["to_update"] == [
+            {"uid": "SOUP-001", "name": "click", "old_version": "8.0.0", "new_version": "8.1.7"}]
 
     @pytest.mark.dhf_links("SRS-070")
     @pytest.mark.dhf_testing("T4")
@@ -255,17 +256,17 @@ class TestSyncSoupItems:
         with patch("dhfkit.item_store.ItemStore.list_items", return_value=[]):
             result = sync_soup_items(tmp_path / "DHF", [bad])
 
-        assert result["outcome"] == "completed_with_errors"
         assert any("Unsupported manifest" in e for e in result["errors"])
 
 
     def test_multiple_manifests_merged(self, tmp_path):
         req = _req_txt(tmp_path, "flask==3.0.0\n")
         pkg = _pkg_json(tmp_path, {"dependencies": {"react": "^18.2.0"}})
-        with patch("dhfkit.item_store.ItemStore.list_items", return_value=[]):
+        with patch("dhfkit.item_store.ItemStore.list_items", return_value=[]), \
+             patch("dhfkit.item_store.ItemStore.create_item", side_effect=[{"id": "SOUP-001"}, {"id": "SOUP-002"}]):
             result = sync_soup_items(tmp_path / "DHF", [req, pkg])
 
-        assert set(result["to_create"]) == {"flask", "react"}
+        assert len(result["items_created"]) == 2
         assert len(result["manifests_parsed"]) == 2
 
     @pytest.mark.dhf_links("SRS-070")
@@ -275,7 +276,6 @@ class TestSyncSoupItems:
         with patch("dhfkit.item_store.ItemStore.list_items", side_effect=RuntimeError("boom")):
             result = sync_soup_items(tmp_path / "DHF", [req])
 
-        assert result["outcome"] == "completed_with_errors"
         assert any("Failed to list SOUP" in e for e in result["errors"])
 
     def test_deduplication_across_manifests(self, tmp_path):
@@ -298,12 +298,13 @@ class TestSyncSoupItems:
             "dependencies": {"axios": "^1.6.0"},
             "peerDependencies": {"axios": "^1.0.0"},
         })
-        with patch("dhfkit.item_store.ItemStore.list_items", return_value=[]):
+        with patch("dhfkit.item_store.ItemStore.list_items", return_value=[]), \
+             patch("dhfkit.item_store.ItemStore.create_item", return_value={"id": "SOUP-001"}) as mock_create:
             result = sync_soup_items(tmp_path / "DHF", [pkg])
 
-        assert result["to_create"].count("axios") == 1
+        assert mock_create.call_count == 1 and len(result["items_created"]) == 1
 
-    def test_partial_write_failure_is_completed_with_errors(self, tmp_path):
+    def test_partial_write_failure_is_reported(self, tmp_path):
         # create_item succeeds for first package, fails for second
         req = _req_txt(tmp_path, "flask==3.0.0\nnumpy==1.26.0\n")
         side_effects = [{"id": "SOUP-001"}, RuntimeError("db error")]
@@ -311,6 +312,5 @@ class TestSyncSoupItems:
              patch("dhfkit.item_store.ItemStore.create_item", side_effect=side_effects):
             result = sync_soup_items(tmp_path / "DHF", [req])
 
-        assert result["outcome"] == "completed_with_errors"
         assert result["items_created"] == ["SOUP-001"]
         assert any("Failed to create" in e for e in result["errors"])

@@ -67,9 +67,9 @@ def _code_paths(dhf_path: Path, repo_root: Path) -> tuple[str, ...]:
 
 
 def _validate_design(run: Run, name: str, items_changed: dict) -> list[dict]:
-    step, perf = _begin_step(name, {"validator": "validate_generate_dhf"})
+    step, perf = _begin_step(name)
     errors = design_validation.validate_generate_dhf(run.cr_id, run.dhf_path, items_changed, run.code_changed())
-    run.steps.append(_finish_step(step, perf, "failed" if errors else "ok", {"error_count": len(errors)}))
+    run.steps.append(_finish_step(step, perf, "failed" if errors else "ok"))
     return errors
 
 
@@ -113,10 +113,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None,
 
     feedback = _pr_feedback(pr_number, run.steps, run.warnings) if pr_number else None
     if feedback is not None:
-        prompt_step, prompt_perf = _begin_step(
-            "prepare_prompt",
-            {"prompt_kind": "generate_dhf_revision", "used_pr_feedback": True},
-        )
+        prompt_step, prompt_perf = _begin_step("prepare_revision_prompt")
         prompt = (
             f"Read the DHF items in {dhf_path.resolve().name}/ related to {cr_id}, "
             f"then revise them based on the following pull request review feedback. "
@@ -128,10 +125,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None,
         )
         prompt = _enrich_with_plan_context(prompt, cr_id, dhf_path, run.warnings)
     else:
-        prompt_step, prompt_perf = _begin_step(
-            "prepare_prompt",
-            {"prompt_kind": "generate_dhf_generation", "used_pr_feedback": False},
-        )
+        prompt_step, prompt_perf = _begin_step("prepare_generation_prompt")
         prompt = _assemble_generate_dhf_prompt(cr_id, dhf_path, run.warnings)
     run.steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
 
@@ -142,7 +136,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None,
     if (reason := design_validation.cr_triage_rejection(dhf_path, cr_id)) is not None:
         return _stopped(
             run, "generate_dhf",
-            {"items_changed": run.items_changed(), "design_impact": {"recorded": False, "reason": "cr_rejected"}},
+            {"items_changed": run.items_changed()},
             [{"field": "triage_result",
               "issue": f"Triage rejected {cr_id}, so no design was generated: {reason}",
               "fix": f"Close the change request, or reword it and run `build plan --cr {cr_id}` again."}],
@@ -235,27 +229,19 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None,
             ),
         })
         items_changed = None
-    artifact_step, artifact_perf = _begin_step(
-        "collect_artifacts", {"kind": "dhf_items_changed", "snapshot_only": True}
-    )
-    run.steps.append(_finish_step(artifact_step, artifact_perf, "ok", {"items_changed": items_changed}))
-
-    design_impact: dict = {"recorded": False, "reason": "skipped_due_to_validation_errors"}
     if not errors:
         impact_step, impact_perf = _begin_step("record_design_impact")
-        design_impact = _record_design_impact_in_cr(cr_id, dhf_path, items_changed)
-        run.steps.append(_finish_step(
-            impact_step, impact_perf, "ok" if design_impact.get("recorded") else "warning", design_impact,
-        ))
+        not_recorded = _record_design_impact_in_cr(cr_id, dhf_path, items_changed)
+        if not_recorded:
+            run.warnings.append(_warning("affected_items_not_recorded", not_recorded))
+        run.steps.append(_finish_step(impact_step, impact_perf, "warning" if not_recorded else "ok"))
 
     if run.session_id and pr_number:
         put_session(pr_number, run.session_id)
     if pr_number and not run.critical_failed and not outside:
         _push_to_pr(run.repo_root, pr_number, f"design({cr_id}): build plan", errors)
 
-    result = run.respond(
-        "generate_dhf", {"items_changed": items_changed, "design_impact": design_impact}, errors,
-    )
+    result = run.respond("generate_dhf", {"items_changed": items_changed}, errors)
     result["design_review"] = _build_review_result("Design", design_review_log)
     if pr_number:
         token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN") or ""
@@ -267,11 +253,10 @@ def _run_checks(run: Run, checks: tuple[str, ...], develop_llm) -> list[dict]:
     """Run the `--check` commands, sending a failure back to the model for a fix."""
     results: list[dict] = []
     for attempt in range(_MAX_CHECK_FIX_CYCLES + 1):
-        step, perf = _begin_step("run_checks", {"attempt": attempt + 1})
+        step, perf = _begin_step("run_checks")
         results = check_runner.run_checks(run.repo_root, checks)
         failed = [c for c in results if not c["passed"]]
-        run.steps.append(_finish_step(step, perf, "failed" if failed else "ok",
-                                      {"failed": [c["command"] for c in failed]}))
+        run.steps.append(_finish_step(step, perf, "failed" if failed else "ok"))
         if not failed or attempt == _MAX_CHECK_FIX_CYCLES:
             break
         report = "\n\n".join(f"`{c['command']}` exited {c['exit_code']}:\n{c['output']}" for c in failed)
@@ -310,20 +295,13 @@ def generate_code(
             preflight_errors = design_validation.validate_dhf_structure(dhf_path)
         except Exception:
             preflight_errors = []
-        run.steps.append(_finish_step(
-            preflight_step, preflight_perf,
-            "warning" if preflight_errors else "ok",
-            {"error_count": len(preflight_errors)},
-        ))
+        run.steps.append(_finish_step(preflight_step, preflight_perf, "warning" if preflight_errors else "ok"))
         for e in preflight_errors:
             run.warnings.append(_warning("preflight_traceability", f"{e['issue']} Fix: {e['fix']}",
                                          {"field": e["field"]}))
 
     if feedback is not None:
-        prompt_step, prompt_perf = _begin_step(
-            "prepare_prompt",
-            {"prompt_kind": "develop_revision", "used_pr_feedback": True},
-        )
+        prompt_step, prompt_perf = _begin_step("prepare_revision_prompt")
         prompt = (
             f"Read the implementation on this branch related to {cr_id}, "
             f"then revise it based on the following pull request review feedback.\n\n"
@@ -331,10 +309,7 @@ def generate_code(
         ) + checks_section(checks)
         run.steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
     else:
-        prompt_step, prompt_perf = _begin_step(
-            "prepare_prompt",
-            {"prompt_kind": "develop_generation", "used_pr_feedback": False},
-        )
+        prompt_step, prompt_perf = _begin_step("prepare_generation_prompt")
         prompt = _assemble_develop_prompt(cr_id, dhf_path=dhf_path, warnings=run.warnings, checks=checks,
                                           since_ref=since_ref)
         diff = git.compute_diff(run.repo_root, since_ref, *_code_paths(dhf_path, run.repo_root))
@@ -353,7 +328,7 @@ def generate_code(
                     f"_(diff truncated at {MAX_DIFF_CHARS} chars — "
                     "remaining changes not shown)_\n"
                 )
-        run.steps.append(_finish_step(prompt_step, prompt_perf, "ok", {"diff_injected": bool(diff)}))
+        run.steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
 
     run.call("run_initial_generation", prompt, develop_llm, critical=True, resume=prior_session)
     if run.critical_failed:
@@ -398,7 +373,8 @@ def generate_code(
     if run.unreadable:
         run.warnings.append(_warning("diff_unavailable", f"affected_items not updated: {run.unreadable[-1]}"))
     else:
-        _record_design_impact_in_cr(cr_id, dhf_path, items_changed)
+        if not_recorded := _record_design_impact_in_cr(cr_id, dhf_path, items_changed):
+            run.warnings.append(_warning("affected_items_not_recorded", not_recorded))
     errors: list[dict] = [
         {"field": "check", "issue": f"`{c['command']}` exited {c['exit_code']} after {_MAX_CHECK_FIX_CYCLES} "
                                    f"fix attempts:\n{c['output'][-1000:]}",
@@ -407,7 +383,6 @@ def generate_code(
     ]
     if pr_number and not errors:
         _push_to_pr(run.repo_root, pr_number, f"feat({cr_id}): build code", errors)
-    artifact_step, artifact_perf = _begin_step("collect_artifacts", {"kind": "files_changed"})
     try:
         files_changed = git.collect_path_changes(run.repo_root, since_ref, *_code_paths(dhf_path, run.repo_root))
     except git.DiffUnavailable as exc:
@@ -416,7 +391,6 @@ def generate_code(
             "diff_unavailable",
             f"Could not diff against {since_ref} ({exc}); files_changed is unknown, not empty.",
         ))
-    run.steps.append(_finish_step(artifact_step, artifact_perf, "ok", {"files_changed": files_changed}))
 
     result = run.respond("develop", {"files_changed": files_changed}, errors)
     result["code_review"] = _build_review_result("Implementation", code_review_log)
