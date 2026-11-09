@@ -241,7 +241,7 @@ class TestBuildReleaseBaseline:
             result = build_release_baseline(
                 tmp_path / "DHF", "1.0.0", [], ["CR-001"], tmp_path / "out",
             )
-        assert result["outcome"] == "completed_with_errors"
+        assert result["errors"]
         assert len(result["errors"]) == 1 and "CR-001" in result["errors"][0]
 
     def test_gate_failure_response_has_consistent_shape(self, tmp_path):
@@ -262,7 +262,7 @@ class TestBuildReleaseBaseline:
             result = build_release_baseline(
                 tmp_path / "DHF", "1.0.0", [], ["CR-001"], tmp_path / "out",
             )
-        assert result["outcome"] == "completed_with_errors"
+        assert result["errors"]
 
     def test_happy_path_writes_artifacts(self, tmp_path):
         out = tmp_path / "out"
@@ -271,7 +271,7 @@ class TestBuildReleaseBaseline:
             result = build_release_baseline(
                 tmp_path / "DHF", "1.0.0", [], ["CR-001"], out,
             )
-        assert result["outcome"] == "completed"
+        assert result["errors"] == []
         assert (out / "release-baseline.json").exists()
         assert (out / "software-bom.json").exists()
 
@@ -340,7 +340,7 @@ class TestBuildReleaseBaseline:
             result = build_release_baseline(
                 tmp_path / "DHF", "1.0.0", [bad], ["CR-001"], out,
             )
-        assert result["outcome"] == "completed_with_errors"
+        assert result["errors"]
         assert any("Failed to parse BOM" in e for e in result["errors"])
 
     def test_out_dir_created_if_missing(self, tmp_path):

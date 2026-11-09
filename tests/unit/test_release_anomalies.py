@@ -118,7 +118,7 @@ class TestGate:
         result = build_release(dhf, "1.0.0", tmp_path / "out", write=True,
                                junit_paths=[verify_the_starter(dhf, tmp_path / "tr")])
 
-        assert result["outcome"] == "completed_with_errors"
+        assert result["errors"]
         assert any("§9.7" in e for e in result["errors"])
         assert result["rel_uid"] is None
         assert releases() == before, "--write recorded a release that failed its own gate"
@@ -129,7 +129,7 @@ class TestGate:
 
         result = _baseline(dhf, tmp_path / "out")
 
-        assert result["outcome"] == "completed", result["errors"]
+        assert result["errors"] == []
         assert result["known_anomalies"][0]["defect"] == "DEF-001"
 
     def test_error_names_the_defect_and_what_to_do(self, dhf: Path, tmp_path: Path) -> None:
@@ -141,7 +141,7 @@ class TestGate:
 
     def test_no_defects_is_not_a_gap(self, dhf: Path, tmp_path: Path) -> None:
         result = _baseline(dhf, tmp_path / "out")
-        assert result["outcome"] == "completed", result["errors"]
+        assert result["errors"] == []
         assert result["known_anomalies"] == []
 
     @pytest.mark.dhf_links("SRS-045")
@@ -151,7 +151,7 @@ class TestGate:
         _defect(dhf, "DEF-002", "open")
 
         result = _baseline(dhf, tmp_path / "out")
-        assert result["outcome"] == "completed_with_errors"
+        assert result["errors"]
         assert len(result["errors"]) == 1
         assert "DEF-002" in result["errors"][0]
 
@@ -194,7 +194,7 @@ class TestBaselineRunsAtAll:
         project.
         """
         result = _baseline(dhf, tmp_path / "out")
-        assert result["outcome"] == "completed", result["errors"]
+        assert result["errors"] == []
         assert result["soup_count"] >= 1
 
     def test_bom_artifact_keeps_its_uid_key(self, dhf: Path, tmp_path: Path) -> None:

@@ -655,7 +655,6 @@ def sync_soup_items(dhf: Path, manifest_paths: list[Path]) -> dict:
             for e in updated
         ],
         "orphans": [{"uid": it["id"], "name": it.get("name", "")} for it in diff["orphans"]],
-        "matched_count": len(diff["matched"]),
         "items_created": items_created,
         "errors": errors,
     }

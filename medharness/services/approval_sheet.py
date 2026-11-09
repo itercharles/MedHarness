@@ -58,7 +58,7 @@ def build_sheet(dhf_path: Path, version: str, out_dir: Path, *, doc_format: str 
                 since_ref: str | None = None) -> dict:
     """Write the sheet of release *version* when `verify approval --release` passes; otherwise write nothing."""
     gate = approval_gate(dhf_path, since_ref=since_ref, release=version)
-    report = {"outcome": "completed_with_errors", "version": version, "path": None, "documents": 0,
+    report = {"version": version, "path": None, "documents": 0,
               "signatures": 0, "errors": gate["errors"], "warnings": gate["warnings"]}
     if not gate["passed"]:
         return report
@@ -78,4 +78,4 @@ def build_sheet(dhf_path: Path, version: str, out_dir: Path, *, doc_format: str 
     except RuntimeError as exc:
         return {**report, "errors": [str(exc)]}
     signatures = {s["id"] for d in documents for s in d["signatures"]}
-    return {**report, "outcome": "completed", "path": str(path), "documents": len(documents), "signatures": len(signatures)}
+    return {**report, "path": str(path), "documents": len(documents), "signatures": len(signatures)}

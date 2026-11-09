@@ -269,7 +269,7 @@ class TestReleaseBaselineEmitsAnSbom:
                 tmp_path / "nonexistent-DHF", "1.0.0", [], ["CR-001"], out,
             )
 
-        assert result["outcome"] == "completed", result["errors"]
+        assert result["errors"] == []
         assert (out / "sbom.cdx.json").exists()
 
 
@@ -303,7 +303,7 @@ class TestReleaseBaselineReadsEveryManifestSoupSyncDoes:
             dhf, "1.0.0", [manifest], [], out
         )
 
-        assert result["outcome"] == "completed", result["errors"]
+        assert result["errors"] == []
         names = {c["name"] for c in json.loads((out / "sbom.cdx.json").read_text())["components"]}
         assert expected in names
 
@@ -316,7 +316,7 @@ class TestReleaseBaselineReadsEveryManifestSoupSyncDoes:
         result = build_release_baseline(
             dhf, "1.0.0", [manifest], [], tmp_path / "out"
         )
-        assert result["outcome"] == "completed_with_errors"
+        assert result["errors"]
         assert any("Unsupported manifest format" in e for e in result["errors"])
 
     def test_a_malformed_manifest_is_not_called_unsupported(
@@ -335,7 +335,7 @@ class TestReleaseBaselineReadsEveryManifestSoupSyncDoes:
         result = build_release_baseline(
             dhf, "1.0.0", [manifest], [], tmp_path / "out"
         )
-        assert result["outcome"] == "completed_with_errors"
+        assert result["errors"]
         assert any("Failed to parse" in e for e in result["errors"]), result["errors"]
         assert not any("Unsupported" in e for e in result["errors"])
 

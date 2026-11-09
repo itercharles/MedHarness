@@ -85,7 +85,7 @@ class TestBuildRelease:
         )
         assert r.returncode == 0, r.stderr
         data = json.loads(r.stdout)
-        assert data["outcome"] == "completed" and data["errors"] == []
+        assert data["errors"] == []
         assert data["rel_uid"] is None, "a dry run recorded a REL item"
 
         for name in ("release-baseline.json", "software-bom.json", "sbom.cdx.json",

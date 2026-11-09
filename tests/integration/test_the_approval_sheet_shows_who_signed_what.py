@@ -60,7 +60,7 @@ def test_nothing_is_written_while_a_signature_is_missing(project: Project) -> No
     result, report = _sheet(project)
 
     assert result.exit_code == 1
-    assert report.outcome == "completed_with_errors" and report.path is None
+    assert report.errors and report.path is None
     assert any("SYS document" in e and "system-architect: Sam" in e for e in report.errors)
     assert not (project.root / "sheet").exists()
 
@@ -74,7 +74,7 @@ def test_a_signed_release_gets_a_sheet_naming_every_signer_record_and_key(projec
 
     assert result.exit_code == 0, result.stderr
     sheet = project.root / "sheet" / "approval-sheet.html"
-    assert report.path == str(sheet) and report.outcome == "completed" and report.errors == []
+    assert report.path == str(sheet) and report.errors == [] and report.errors == []
     assert report.documents == 12 and report.signatures == 4
     html = sheet.read_text()
     manifest = project.manifest()

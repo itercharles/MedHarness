@@ -137,7 +137,6 @@ class SoupReport(Shape):
     packages_found: int = Field(description="Packages across them")
     to_update: list[SoupDrift] = Field(description="SOUP items whose version has drifted")
     orphans: list[SoupOrphan] = Field(description="SOUP items no manifest resolves")
-    matched_count: int = Field(description="Packages that already have a matching SOUP item")
     items_created: list[str] = Field(description="SOUP items it wrote, in the working tree")
     errors: list[str] = Field(description="Manifests or commands that could not be read; any exits 1")
 
@@ -145,27 +144,23 @@ class SoupReport(Shape):
 class ReleaseReport(Shape):
     """`build release`."""
 
-    outcome: Literal["completed", "completed_with_errors"] = Field(
-        description="`completed_with_errors` exits 1; a failing release still writes its evidence")
     version: str = Field(description="The version released")
     cr_ids: list[str] = Field(description="The completed CRs it includes")
     rel_uid: str | None = Field(description="The REL item recorded; null without `--write` or when a check failed")
     soup_count: int = Field(description="SOUP items in the BOM")
     artifacts: list[str] = Field(description="Files written under `--out-dir`, relative to it")
-    errors: list[str] = Field(description="What blocked the release")
+    errors: list[str] = Field(description="What blocked the release; any exits 1, and a failing release still writes its evidence")
     warnings: list[str] = Field(description="What it noticed without blocking, such as a component with no purl")
 
 
 class ApprovalSheetReport(Shape):
     """`build approvals`."""
 
-    outcome: Literal["completed", "completed_with_errors"] = Field(
-        description="`completed_with_errors` exits 1 and writes nothing")
     version: str = Field(description="The release the sheet is for")
     path: str | None = Field(description="The sheet written; null when the release is not fully signed")
     documents: int = Field(description="Documents on the sheet, the release itself included")
     signatures: int = Field(description="Signature records the sheet shows")
-    errors: list[str] = Field(description="Why no sheet was written, as `verify approval --release` reports it")
+    errors: list[str] = Field(description="Why no sheet was written, as `verify approval --release` reports it; any exits 1")
     warnings: list[str] = Field(description="What `verify approval --release` noticed, such as a signature made without proven presence")
 
 
