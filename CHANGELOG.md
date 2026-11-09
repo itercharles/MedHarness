@@ -11,6 +11,23 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.75.0] — 2026-11-09
+
+`verify completion` is split between the two commands that already ask what it asked. It bundled three unrelated checks: whether the CR's fields were recorded (the question `item transition CR-NNN completed` already refuses on), whether its `affected_items` existed (`verify dhf` already reports a link to nothing), and whether the items it changed had passing tests (`verify tests` scoped to one CR's items, which it called). Breaking.
+
+### Removed
+- `verify completion`. A caller that ran `verify completion --cr CR-NNN --junit PATH` now runs `verify tests --cr CR-NNN --junit PATH`, and `verify dhf --strict` to hold a completed CR to its fields.
+- The `verify completion` report keys `incomplete_cr_fields`, `missing_items`, `verification_gaps`: the findings carry the same facts.
+
+### Added
+- `verify tests --cr CR-NNN` judges only the items in that CR's `affected_items`, and holds them as `--strict` does: a requirement with no declared `verification_method` fails, and so does a `Test` one with no passing linked test. A CR that is not in the DHF fails, naming `cr_item`. A CR whose items need no test passes without `--junit`.
+- `verify dhf` reports a CR whose status is `completed` while it lacks what its type requires of the move to `completed` (by default `affected_items`, `implementation_notes` and `affected_risk_items`): a warning, and an error under `--strict`. A CR that is not completed is asked for nothing.
+
+### Changed
+- `verify tests --cr` is stricter than `verify completion` was in one respect: the test points a scoped item declares must each be covered, and a test that claims a point such an item does not declare is an error. `verify completion` never looked at test points.
+- `build release` asks each included CR the same two questions, the criteria of the move to `completed` and `verify tests --cr`, in place of `verify completion`.
+- SRS-002 to SRS-006 and SRS-044 of the tool's own DHF describe the new commands; their test points are unchanged, and `build validation` still passes all 175.
+
 ## [0.74.0] — 2026-11-09
 
 `verify changes` is folded into `verify impact`. Both compared the working tree with `--since-ref` against the CR's own record, and a caller ran them one after the other with the same arguments. Breaking.

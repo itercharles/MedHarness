@@ -1,4 +1,4 @@
-"""`verify completion` holds every type that declares `verification_method` to it.
+"""`verify tests --cr` holds every type that declares `verification_method` to it.
 
 The list was written into the command — CRS, SRS, SYS, SOUP — so a type a project
 added, such as hardware requirements, closed its change requests without anyone
@@ -46,7 +46,7 @@ def _project(tmp_path: Path, *, verification_method: list[str] | None) -> Path:
 
 
 def _completion(dhf: Path):
-    result = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", "completion", "--cr", "CR-001"])
+    result = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", "tests", "--cr", "CR-001"])
     return result, json.loads(result.stdout.splitlines()[0])
 
 

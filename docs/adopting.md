@@ -48,7 +48,7 @@ A DHF that kept change requests before MedHarness's closure criteria existed has
 medharness --dhf DHF item update CR-004 --data '{"status": "develop"}'
 ```
 
-**Completed CRs that never recorded their closure.** `build release` re-runs `verify completion` for every completed CR it includes, by default every completed CR not yet in a release, so CRs closed before `implementation_notes`, `affected_items` and `triage_result` existed fail it. Do not backfill those fields: a triage approval written years later is not a record of anything. Baseline the history instead. A REL item that lists those CRs in `included_items` takes them out of the default, and the decision is a reviewable change in your DHF:
+**Completed CRs that never recorded their closure.** `build release` asks again what closing a CR asked (the criteria of its move to `completed`, and passing tests for what it changed) of every completed CR it includes, by default every completed CR not yet in a release, so CRs closed before `implementation_notes`, `affected_items` and `triage_result` existed fail it. Do not backfill those fields: a triage approval written years later is not a record of anything. Baseline the history instead. A REL item that lists those CRs in `included_items` takes them out of the default, and the decision is a reviewable change in your DHF:
 
 ```bash
 medharness --dhf DHF item create --type REL --data '{"title": "Baseline of change requests completed before closure records", "version": "baseline", "included_items": ["CR-003", "CR-005"], "release_notes": "Completed before the closure criteria existed; accepted as they are."}'

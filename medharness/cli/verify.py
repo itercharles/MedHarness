@@ -57,19 +57,26 @@ def register(main):
     @click.option("--strict", is_flag=True, default=False,
                   help="Make a requirement with no declared verification_method fail. "
                        "Warns by default, so a project adding the field is not blocked.")
+    @click.option("--cr", "cr_id", default=None, metavar="CR_ID",
+                  help="Judge only the items in this CR's affected_items, as under --strict: the "
+                       "check before closing it, which a CR is not charged the DHF's other gaps in.")
     @click.pass_context
     def verify_tests(ctx: click.Context,
                          junit_paths: tuple[Path, ...],
-                         strict: bool = False) -> None:
+                         strict: bool = False,
+                         cr_id: str | None = None) -> None:
         """Check each requirement is verified by the method it declares.
 
         A requirement declaring Test needs a passing JUnit case linked to it;
         declared test points each need a covering case.
+
+        With --cr, only the requirements the CR changed are judged, so a CR can be closed on
+        what it did. A requirement with no declared method fails there.
         """
         effective_dhf = ctx.obj["dhf"]
         result = ci_test_coverage_gate(dhf_path=effective_dhf,
                                        junit_paths=collect_junit_paths(junit_paths),
-                                       strict=strict)
+                                       strict=strict, cr_id=cr_id)
         emit(result)
         # The rows below print per-type coverage; the envelope's warnings are
         # about the gate as a whole and have no row to be printed beside.
@@ -109,55 +116,6 @@ def register(main):
         if not result["passed"]:
             raise click.ClickException("Test coverage gaps found.")
 
-
-    @verify.command("completion")
-    @click.option("--cr", "cr_id", required=True, metavar="CR_ID",
-                  help="The CR to close.")
-    @junit_option("JUnit XML results for the items this CR touched: a file, or a "
-                  "directory searched for *.xml (repeatable).")
-    @click.pass_context
-    def verify_completion(
-        ctx: click.Context,
-        cr_id: str,
-        junit_paths: tuple[Path, ...],
-    ) -> None:
-        """Check a CR's record is complete and the items it changed are verified.
-
-        Checks the CR's record is complete, that every item in its
-        affected_items exists, and that those of them that are requirements
-        declare a verification method with passing evidence — only those, so a
-        CR is not charged with the DHF's existing gaps.
-
-        Reads only the working tree, so it runs on the branch as well as on main.
-        Run it on the branch to block the merge: the CR fields and the items
-        settle there. Run it again on main for the half that
-        can differ — the tests re-run against whatever else landed meanwhile.
-
-        Exits non-zero when the record is incomplete or an item is missing or unverified.
-        """
-        from medharness.services.verify_completion import cr_closure_gate
-
-        effective_dhf = ctx.obj["dhf"]
-        result = cr_closure_gate(cr_id=cr_id, dhf_path=effective_dhf,
-                                 junit_paths=collect_junit_paths(junit_paths))
-        emit(result)
-
-        for field in details(result).get("incomplete_cr_fields", []):
-            click.echo(f"FAIL [completion] {field['issue']}", err=True)
-        for item in details(result).get("missing_items", []):
-            click.echo(f"FAIL [completion] {item}: in affected_items but absent from the DHF",
-                       err=True)
-        for item in details(result).get("verification_gaps", []):
-            click.echo(f"FAIL [completion] {item['id']}: no verification_method declared", err=True)
-        for item in details(result).get("unverified_test", []):
-            click.echo(f"FAIL [completion] {item['id']}: Test method declared but no passing TC linked", err=True)
-        for item in details(result).get("manual_review_required", []):
-            methods = ", ".join(item.get("methods", []))
-            click.echo(f"WARN [completion] {item['id']}: {methods} — no test evidence, so no check here covers it", err=True)
-
-        click.echo(result["summary"], err=True)
-        if not result["passed"]:
-            raise click.ClickException(f"CR {cr_id} closure verification failed.")
 
     @verify.command("impact")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID",

@@ -26,7 +26,7 @@ dependency on `medharness`, and no CLI of its own.
 | Group | Touches | Commands |
 |-------|---------|----------|
 | `item` | one DHF item at a time | `list` · `get` · `create` · `update` · `transition` · `approve` |
-| `verify` | reads the DHF and the working tree | `dhf` · `tests` · `soup` · `completion` · `impact` · `approval` |
+| `verify` | reads the DHF and the working tree | `dhf` · `tests` · `soup` · `impact` · `approval` |
 | `build` | writes items, code or artifacts | `plan` · `code` · `soup` · `release` · `approvals` · `validation` |
 | `init` | scaffolds a project | — |
 
@@ -40,7 +40,7 @@ runs locally; `--pr` on `build plan|code` is the only thing that is CI-specific.
 
 | Verb | Reads | Examples |
 |------|-------|----------|
-| `verify` | what is on the machine — the DHF and the working tree, never GitHub | `dhf`, `tests`, `soup`, `completion`, `impact`, `approval` |
+| `verify` | what is on the machine — the DHF and the working tree, never GitHub | `dhf`, `tests`, `soup`, `impact`, `approval` |
 | `build` | whatever it needs; **writes** items, code, or artifacts | `plan`, `code`, `soup`, `release`, `approvals`, `validation` |
 
 During development approval is the review of the pull request, under the team's

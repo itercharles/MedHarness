@@ -1,4 +1,4 @@
-"""`verify completion`: a CR closes only on a complete record whose changed items are verified (SRS-002 to SRS-006)."""
+"""Closing a CR: `verify dhf` on a completed CR and `verify tests --cr` on what it changed (SRS-002 to SRS-006)."""
 
 from __future__ import annotations
 
@@ -19,15 +19,15 @@ def verified_starter(root: Path) -> None:
     edit(root, "CR-001", **RECORD)
 
 
-def _completion(root: Path, *junit_paths: Path) -> tuple[int, dict, str]:
-    args = ["verify", "completion", "--cr", "CR-001"]
+def _tests(root: Path, *junit_paths: Path, cr: str = "CR-001") -> tuple[int, dict, str]:
+    args = ["verify", "tests", "--cr", cr]
     for path in junit_paths:
         args += ["--junit", str(path)]
     return invoke(root, *args)
 
 
 def _refused(root: Path, *needles: str, junit_paths: tuple[Path, ...] = ()) -> dict:
-    code, answer, _ = _completion(root, *junit_paths)
+    code, answer, _ = _tests(root, *junit_paths)
     check(code == 1 and answer["passed"] is False, f"exited {code} with passed={answer['passed']}: {answer['errors']}")
     for needle in needles:
         check(any(needle in e for e in answer["errors"]), f"no error names {needle!r}: {answer['errors']}")
@@ -35,7 +35,7 @@ def _refused(root: Path, *needles: str, junit_paths: tuple[Path, ...] = ()) -> d
 
 
 def _closes(root: Path, *junit_paths: Path) -> dict:
-    code, answer, _ = _completion(root, *junit_paths)
+    code, answer, _ = _tests(root, *junit_paths)
     check(code == 0 and answer["passed"] is True, f"exited {code}; errors: {answer['errors']}")
     return answer
 
@@ -51,30 +51,61 @@ def _results(root: Path, *tests: tuple) -> Path:
     return junit(root / "results" / "case.xml", *tests)
 
 
-# --- SRS-002: the CR's own record ----------------------------------------------------------------
+def _completed_cr(root: Path) -> None:
+    edit(root, "CR-001", status="completed", **RECORD)
 
-def cr_not_in_the_dhf(root: Path) -> None:
-    item_path(root, "CR-001").unlink()
-    _refused(root, "CR-001")
+
+def _dhf(root: Path, *args: str) -> tuple[int, dict, str]:
+    return invoke(root, "verify", "dhf", *args)
+
+
+def _reported(root: Path, *needles: str) -> None:
+    """A completed CR that lacks what closing asks is an error under --strict and a warning without it."""
+    code, answer, _ = _dhf(root, "--strict")
+    closing = [e for e in answer["errors"] if "completed, but" in e]
+    check(code == 1 and closing, f"exited {code}; errors: {answer['errors']}")
+    for needle in needles:
+        check(any(needle in e for e in closing), f"no finding names {needle!r}: {closing}")
+    _, lenient, _ = _dhf(root)
+    check(any("completed, but" in w for w in lenient["warnings"]) and not any("completed, but" in e for e in lenient["errors"]),
+          f"without --strict it is not a warning: {lenient['warnings']} {lenient['errors']}")
+
+
+def _not_asked(root: Path) -> None:
+    code, answer, _ = _dhf(root, "--strict")
+    said = [m for m in answer["errors"] + answer["warnings"] if "completed, but" in m]
+    check(not said, f"a CR was asked what closing asks: {said}")
+
+
+# --- SRS-002: a completed CR that lacks what closing asks ---------------------------------------
+
+def an_open_cr_is_not_asked(root: Path) -> None:
+    for field in RECORD:
+        _without(root, "CR-001", field)
+    edit(root, "CR-001", status="develop")
+    _not_asked(root)
 
 
 def affected_items_not_recorded(root: Path) -> None:
+    _completed_cr(root)
     _without(root, "CR-001", "affected_items")
-    _refused(root, "affected_items")
+    _reported(root, "affected_items")
 
 
 def implementation_notes_missing_or_empty(root: Path) -> None:
+    _completed_cr(root)
     _without(root, "CR-001", "implementation_notes")
-    _refused(root, "implementation_notes")
+    _reported(root, "implementation_notes")
     edit(root, "CR-001", implementation_notes="")
-    _refused(root, "implementation_notes")
+    _reported(root, "implementation_notes")
 
 
 def affected_risk_items_missing_or_null(root: Path) -> None:
+    _completed_cr(root)
     _without(root, "CR-001", "affected_risk_items")
-    _refused(root, "affected_risk_items")
+    _reported(root, "affected_risk_items")
     edit(root, "CR-001", affected_risk_items=None)
-    _refused(root, "affected_risk_items")
+    _reported(root, "affected_risk_items")
 
 
 def closure_asks_what_the_cr_type_asks(root: Path) -> None:
@@ -85,39 +116,43 @@ def closure_asks_what_the_cr_type_asks(root: Path) -> None:
     override = root / "DHF" / "config" / "doc_types" / "cr.yaml"
     override.parent.mkdir(exist_ok=True)
     override.write_text(yaml.safe_dump(cr_type), encoding="utf-8")
+    _completed_cr(root)
     _without(root, "CR-001", "description")
-    _refused(root, "Description written")
+    _reported(root, "description")
 
     to_completed["criteria"] = []
     override.write_text(yaml.safe_dump(cr_type), encoding="utf-8")
     for field in RECORD:
         _without(root, "CR-001", field)
-    _closes(root)
+    _not_asked(root)
 
 
 def every_incomplete_field_on_the_command_line(root: Path) -> None:
+    _completed_cr(root)
     for field in RECORD:
         _without(root, "CR-001", field)
-    code, answer, stderr = _completion(root)
-    check(code != 0, f"exited {code}")
+    code, answer, stderr = _dhf(root)
+    check(code == 0, f"exited {code} without --strict: {answer['errors']}")
+    strict_code, _, _ = _dhf(root, "--strict")
+    check(strict_code == 1, f"exited {strict_code} with --strict")
     for field in RECORD:
-        check(any(field in e for e in answer["errors"]), f"{field} is not reported: {answer['errors']}")
-        check(f"FAIL [completion]" in stderr and field in stderr, f"stderr does not report {field}: {stderr!r}")
+        check(any(field in w for w in answer["warnings"]), f"{field} is not reported: {answer['warnings']}")
+        check("WARN" in stderr and field in stderr, f"stderr does not report {field}: {stderr!r}")
 
 
-# --- SRS-003: an affected item absent from the DHF -----------------------------------------------
+# --- SRS-003: an affected item or a CR the DHF does not have -------------------------------------
 
 def affected_item_absent(root: Path) -> None:
     edit(root, "CR-001", affected_items=["SRS-404"])
-    answer = _refused(root, "SRS-404")
-    check(any("absent from the DHF" in e or "not in the DHF" in e for e in answer["errors"]),
-          f"the error does not say SRS-404 is absent: {answer['errors']}")
+    code, answer, _ = _dhf(root)
+    check(code == 1 and any("SRS-404" in e and "does not exist" in e for e in answer["errors"]),
+          f"exited {code}; errors: {answer['errors']}")
 
 
-def absent_item_on_the_command_line(root: Path) -> None:
-    edit(root, "CR-001", affected_items=["SRS-404"])
-    code, _, stderr = _completion(root)
-    check(code != 0 and "SRS-404" in stderr, f"exited {code}; stderr: {stderr!r}")
+def cr_not_in_the_dhf(root: Path) -> None:
+    code, answer, _ = _tests(root, cr="CR-404")
+    check(code == 1 and any(e.startswith("cr_item") and "CR-404" in e for e in answer["errors"]),
+          f"exited {code}; errors: {answer['errors']}")
 
 
 # --- SRS-004: a changed requirement with no verification method ----------------------------------
@@ -161,7 +196,7 @@ def no_linked_test(root: Path) -> None:
 
 def no_junit_at_all(root: Path) -> None:
     edit(root, "CR-001", affected_items=["SRS-001"])
-    _refused(root, "SRS-001")
+    _refused(root, "JUnit")
 
 
 def the_only_linked_test_failed(root: Path) -> None:
@@ -174,7 +209,7 @@ def a_failing_test_outweighs_a_passing_one(root: Path) -> None:
     _refused(root, "SRS-001", junit_paths=(_results(root, ("test_ok", "SRS-001", "passed"), ("test_bad", "SRS-001", "failed")),))
 
 
-# --- SRS-006: a complete, verified CR closes, blamed for nothing else ----------------------------
+# --- SRS-006: a verified CR passes, blamed for nothing else --------------------------------------
 
 def verified_items_close(root: Path) -> None:
     edit(root, "CR-001", affected_items=["SYS-001", "SRS-001"])
@@ -203,7 +238,7 @@ def a_changed_soup_item_needs_no_method(root: Path) -> None:
 
 
 def closing_on_the_command_line(root: Path) -> None:
-    code, answer, _ = _completion(root)
+    code, answer, _ = _tests(root)
     check(code == 0 and "CR-001" in answer["summary"], f"exited {code}; summary: {answer['summary']!r}")
 
 
@@ -217,7 +252,7 @@ def scaffolded_with_a_record(root: Path) -> None:
 
 
 CASES = [
-    Case("cr_not_in_the_dhf", "SRS-002", ("T1",), verified_starter, cr_not_in_the_dhf, tools=()),
+    Case("an_open_cr_is_not_asked", "SRS-002", ("T1",), verified_starter, an_open_cr_is_not_asked, tools=()),
     Case("affected_items_not_recorded", "SRS-002", ("T2",), verified_starter, affected_items_not_recorded, tools=()),
     Case("implementation_notes_missing_or_empty", "SRS-002", ("T3",), verified_starter,
          implementation_notes_missing_or_empty, tools=()),
@@ -228,7 +263,7 @@ CASES = [
     Case("every_incomplete_field_on_the_command_line", "SRS-002", ("T6",), verified_starter,
          every_incomplete_field_on_the_command_line, tools=()),
     Case("affected_item_absent", "SRS-003", ("T1",), verified_starter, affected_item_absent, tools=()),
-    Case("absent_item_on_the_command_line", "SRS-003", ("T2",), verified_starter, absent_item_on_the_command_line, tools=()),
+    Case("cr_not_in_the_dhf", "SRS-003", ("T2",), verified_starter, cr_not_in_the_dhf, tools=()),
     Case("requirement_without_a_method", "SRS-004", ("T1",), verified_starter, requirement_without_a_method, tools=()),
     Case("added_type_without_a_method", "SRS-004", ("T2",), verified_starter, added_type_without_a_method, tools=()),
     Case("scaffolded_requirement_without_a_method", "SRS-004", ("T3",), scaffolded_with_a_record,

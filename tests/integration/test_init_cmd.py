@@ -45,7 +45,7 @@ class TestInitCmd:
         _write_agent_files(tmp_path, "Device")
         agents = (tmp_path / "AGENTS.md").read_text()
         for step in ("build plan --cr CR-NNN --prompt", "build code --cr CR-NNN --prompt",
-                     "verify completion --cr CR-NNN", "verify impact --cr CR-NNN --code-path src/"):
+                     "verify tests --cr CR-NNN", "verify impact --cr CR-NNN --code-path src/"):
             assert step in agents, step
 
     def test_the_instructions_route_every_dhf_read_and_write_through_item(self, tmp_path):

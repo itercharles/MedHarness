@@ -1,7 +1,7 @@
 """A CR cannot be closed before it carries what closure means.
 
 The reference project had eight CRs marked `completed` and all eight failed
-`verify completion`. The most instructive was CR-012: the AI workflow wrote a
+`verify dhf`. The most instructive was CR-012: the AI workflow wrote a
 good plan, the process broke off before the approval gate, and someone
 transitioned the CR to `completed` by hand. Nothing stopped them — the shipped
 `cr.yaml` defined five transitions and zero criteria, so `completed` was
@@ -79,7 +79,7 @@ class TestClosureIsRefusedUntilTheRecordExists:
 class TestAssessedAndEmptyIsAnAnswer:
     """`affected_risk_items: []` means the risks were assessed and none apply.
 
-    `verify completion` accepts it — it checks `isinstance(..., list)` and its
+    the criterion accepts it — it checks `isinstance(..., list)` and its
     own message says "use [] if none". A criterion reading falsy-as-absent would
     have been stricter than the gate it mirrors, and would have forced projects
     to invent an affected risk to close a CR that affects none.

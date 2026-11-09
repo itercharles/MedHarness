@@ -19,7 +19,7 @@ The risk is what a wrong **pass** would cause: a command that fails something so
 
 | Risk | Commands | A wrong pass means |
 |---|---|---|
-| High | `verify completion`, `verify tests`, `verify approval --release`, `build release`, `verify impact`, `verify dhf` | unverified, unapproved or untraced content is released, or an omission is hidden |
+| High | `verify tests`, `verify approval --release`, `build release`, `verify impact`, `verify dhf` | unverified, unapproved or untraced content is released, or an omission is hidden |
 | Medium | `verify soup`, `item transition`, `item create` / `update`, `verify approval` without `--release`, `build approvals`, `build soup`, `build validation` | wrong data or a missed vulnerability, which a later gate checks again; for `build validation`, a user's validation evidence that overstates, while the release's own suite still verifies every gate |
 | Low | `item get` / `list`, `init` | nothing evidence depends on |
 | Out of scope | `build plan`, `build code` | AI proposals, not relied on |
@@ -52,7 +52,7 @@ CI runs exactly this in the job `Own DHF - all tests pass, every requirement ver
 
 | Command | Items | State |
 |---|---|---|
-| `verify completion` | SRS-002 to SRS-006 | covered |
+| Closing a CR: `verify dhf` on a completed CR, `verify tests --cr` | SRS-002 to SRS-006 | covered |
 | `verify impact` | SRS-007 to SRS-015 | covered |
 | `verify approval --release` (and the approval log and approvers list it relies on) | SRS-016 to SRS-023 | covered |
 | `verify tests` | SRS-024 to SRS-029 | covered |
@@ -81,7 +81,7 @@ The set exercises every test point of the high-risk requirements, 175 points, ea
 | Module | What it covers | Points |
 |---|---|---|
 | `medharness/validation/seeded.py` | The seeded-omission project: the honest change passes every gate, and each omission is stopped by the gate whose job it is | SRS-007 T4, SRS-008 T2, SRS-009 T2, SRS-010 T4, SRS-011 T3, SRS-012 T3, SRS-030 T4, SRS-031 T2, SRS-034 T3 |
-| `medharness/validation/completion.py` | `verify completion`, every point | SRS-002 to SRS-006 (22) |
+| `medharness/validation/completion.py` | `verify dhf` on a completed CR and `verify tests --cr`, every point | SRS-002 to SRS-006 (22) |
 | `medharness/validation/impact.py` | `verify impact`, every point the seeded project does not cover | SRS-007 to SRS-015 (22) |
 | `medharness/validation/approval.py` | `verify approval`, every point, with throwaway SSH keys (`medharness/validation/signing.py`); needs `ssh-keygen` | SRS-016 to SRS-023 (31) |
 | `medharness/validation/verification.py` | `verify tests`, every point | SRS-024 to SRS-029 (20) |

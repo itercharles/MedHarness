@@ -14,6 +14,7 @@ def ci_test_coverage_gate(
     dhf_path: Path,
     junit_paths: list[Path],
     strict: bool = False,
+    cr_id: str | None = None,
 ) -> dict[str, Any]:
     """Check requirement coverage from JUnit evidence.
 
@@ -27,14 +28,30 @@ def ci_test_coverage_gate(
     one whose methods are only Inspection, Analysis or Demonstration does not, and is
     listed as verified without a test instead. If a requirement declares numbered test points in its ``testing`` field,
     each declared point must also be covered by at least one passing linked test.
+
+    With ``cr_id`` only the items in that CR's ``affected_items`` are judged, and as under
+    ``strict``: charging one CR with every requirement the DHF never verified would make the
+    check unusable on a project that has any.
     """
     from dhfkit.store import open_store
 
-    if not junit_paths:
+    scope: set[str] | None = None
+    if cr_id is not None:
+        cr_item = open_store(dhf_path).get_item(cr_id)
+        if cr_item is None:
+            return gate_result(
+                "verify tests", False, f"{cr_id}: not in the DHF.",
+                errors=[f"cr_item: CR {cr_id} is not in the DHF."], warnings=[], results=[],
+                missing_method=[], unverified_test=[], manual_review_required=[],
+            )
+        scope = {uid for uid in cr_item.get("affected_items") or [] if isinstance(uid, str)}
+        strict = True
+
+    if not junit_paths and (scope is None or _scope_needs_evidence(dhf_path, scope)):
         # Declaring a verification method needs no test run, so returning here
         # skipped a check that had nothing to do with the missing evidence.
         methods = validate_verification_completeness(
-            dhf_path, [], enforce_test_evidence=False,
+            dhf_path, [], enforce_test_evidence=False, item_ids=scope,
         )
         missing = methods["missing_method"]
         # Missing evidence still fails: this gate's job is to confirm the tests
@@ -62,13 +79,14 @@ def ci_test_coverage_gate(
 
     adapter = open_store(dhf_path)
     all_items = adapter.list_items()
+    judged = all_items if scope is None else [it for it in all_items if it["id"] in scope]
 
     results: list[dict] = []
     testing_points: list[dict] = []
 
     for rt in adapter.config.requirement_types():
         prefix = adapter.config.get_doc_type(rt).prefix
-        req_items = [it for it in all_items if it["id"].startswith(prefix) and _needs_a_test(it)]
+        req_items = [it for it in judged if it["id"].startswith(prefix) and _needs_a_test(it)]
         if not req_items:
             continue
         covered_count = 0
@@ -127,7 +145,8 @@ def ci_test_coverage_gate(
     # was wrong about its half.
     methods = validate_verification_completeness(
         dhf_path, list(junit_paths),
-        enforce_test_evidence=bool(junit_paths),
+        enforce_test_evidence=bool(junit_paths) or scope is not None,
+        item_ids=scope,
     )
     errors += [
         f"{gap['id']}: declares Test but no passing case is linked"
@@ -138,7 +157,7 @@ def ci_test_coverage_gate(
         f"so no check here covers it"
         for gap in methods["manual_review_required"]
     ]
-    if not junit_paths:
+    if not junit_paths and scope is None:
         warnings.append(
             "No JUnit evidence given, so test results were not checked — "
             "pass --junit to verify them."
@@ -148,7 +167,7 @@ def ci_test_coverage_gate(
     # until asked to block.
     known = {item["id"] for item in all_items}
     stale: dict[str, list[str]] = {}
-    for test in evidence:
+    for test in evidence if scope is None else []:
         if test.status != "SKIP":
             for link in test.links:
                 if link not in known:
@@ -165,7 +184,7 @@ def ci_test_coverage_gate(
         if test.status != "SKIP":
             for link in test.links:
                 for point in test.testing_points:
-                    if link in declared and point not in declared[link]:
+                    if link in declared and (scope is None or link in scope) and point not in declared[link]:
                         unclaimed.setdefault((link, point), []).append(test.name)
     (errors if strict else warnings).extend(
         f"{uid}: {point} is claimed by {', '.join(repr(n) for n in sorted(set(names))[:3])} but {uid} does not declare it"
@@ -182,7 +201,8 @@ def ci_test_coverage_gate(
 
     return gate_result(
         "verify tests", not errors,
-        f"{covered}/{total} requirement(s) covered by passing tests.",
+        f"{covered}/{total} requirement(s) covered by passing tests." if cr_id is None
+        else f"{cr_id}: {covered}/{total} requirement(s) it changed are covered by passing tests.",
         errors=errors, warnings=warnings,
         results=results,
         testing_points=testing_points,
@@ -191,6 +211,16 @@ def ci_test_coverage_gate(
         unverified_test=methods["unverified_test"],
         manual_review_required=methods["manual_review_required"],
     )
+
+
+def _scope_needs_evidence(dhf_path: Path, scope: set[str]) -> bool:
+    """Whether any requirement in ``scope`` is expected to have a passing test."""
+    from dhfkit.store import open_store
+
+    adapter = open_store(dhf_path)
+    prefixes = tuple(adapter.config.get_doc_type(code).prefix for code in adapter.config.requirement_types())
+    return any(it["id"] in scope and it["id"].startswith(prefixes) and _needs_a_test(it)
+               for it in adapter.list_items())
 
 
 _NON_TEST_METHODS = frozenset({"Inspection", "Analysis", "Demonstration"})
@@ -308,7 +338,7 @@ def validate_verification_completeness(
 
     has_junit = bool(junit_paths)
     # enforce_test_evidence=True: Test items without passing TCs always fail even
-    # when no JUnit files are provided — used by the CR closure gate where missing
+    # when no JUnit files are provided — used by the CR-scoped `verify tests`, where missing
     # evidence is itself the failure, not an acceptable "not yet checked" state.
     passed = not missing_method and (not unverified_test if (has_junit or enforce_test_evidence) else True)
 

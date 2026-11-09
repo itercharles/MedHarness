@@ -74,9 +74,13 @@ def _module_for_export(repo: Path) -> None:
         (repo / "DHF" / "items" / directory / f"{data['id']}.yaml").write_text(yaml.safe_dump(data), encoding="utf-8")
 
 
+OLD_POINT = "T1: a calibration factor of 1.0 leaves 100 MU at 100 cGy"
+
+
 def honest_change(root: Path) -> None:
     """SYS-001 and its test point change with the code, and the CR settles what they reach."""
     starter(root, "Seeded")
+    edit(root, "SYS-001", testing=OLD_POINT)
     edit(root, "MODULE-001", paths=["src/dose.py", "src/test_dose.py"])
     _module_for_export(root)
     (root / "src").mkdir()
@@ -99,7 +103,7 @@ def stopped_by(repo: Path) -> dict[str, list[str]]:
         "verify dhf": ["verify", "dhf"],
         "verify tests": ["verify", "tests", "--junit", junit],
         "verify impact": ["verify", "impact", "--cr", "CR-001", "--since-ref", "main", "--code-path", "src"],
-        "verify completion": ["verify", "completion", "--cr", "CR-001", "--junit", junit],
+        "verify tests --cr": ["verify", "tests", "--cr", "CR-001", "--junit", junit],
     }
     stopped = {}
     for gate, args in commands.items():
@@ -150,7 +154,7 @@ def changed_requirement_lost_its_test(repo: Path) -> None:
 
 def old_test_point_kept(repo: Path) -> None:
     """SYS-001 now requires something new; its test points are what they were."""
-    edit(repo, "SYS-001", testing="")
+    edit(repo, "SYS-001", testing=OLD_POINT)
 
 
 def code_changed_without_a_requirement(repo: Path) -> None:

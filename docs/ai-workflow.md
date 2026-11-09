@@ -29,7 +29,7 @@ A change to what the product does is not finished until its DHF is.
 - **Check it**, and fix what they report:
   - `medharness verify dhf`
   - `medharness verify impact --cr CR-NNN --code-path src/`
-  - `medharness verify completion --cr CR-NNN --junit <results>`
+  - `medharness verify tests --cr CR-NNN --junit <results>`
 - **Close it:** `medharness item transition CR-NNN completed`.
 
 Go through `medharness item` for every DHF question and change, inside a CR or not:
@@ -84,20 +84,20 @@ Reads `implementation_notes` as the primary spec (it refuses a CR that has none,
 
 The answer's `artifacts.files_changed` lists the code changed on the branch, committed or not: the whole repository except the DHF. Set `MEDHARNESS_CODE_PATHS` (comma-separated, e.g. `src/,lib/`) to narrow it.
 
-### `verify completion` — closure gate
+### Closing a CR
 
 ```bash
-medharness --dhf DHF verify completion --cr CR-001 --junit test-results
+medharness --dhf DHF verify tests --cr CR-001 --junit test-results
+medharness --dhf DHF verify dhf --strict
 ```
 
-Run it on the branch to block the merge, and again on `main`, where the tests re-run against whatever else landed. Checks, for the items this CR touched only:
+Run both on the branch to block the merge, and `verify tests --cr` again on `main`, where the tests re-run against whatever else landed.
 
-1. The CR carries what its type requires of the move to `completed`: the criteria on that transition in `cr.yaml`, which `item transition CR-NNN completed` refuses on too (by default the four marked ✓ above). A project that changes them there changes this check. A CR planned by hand records the fields with `medharness item update`.
-2. Every item in `affected_items` exists in the DHF.
-3. Those that are requirements (CRS, SYS, SRS) have `verification_method` set.
-4. Those with `Test` have passing JUnit evidence.
+`verify tests --cr` judges the items this CR touched only, as under `--strict`, so the CR is not charged the DHF's other gaps. Every item in `affected_items` that is a requirement (CRS, SYS, SRS) must have `verification_method` set, and those with `Test` need passing JUnit evidence; the declared test points must each be covered. A CR that is not in the DHF fails.
 
-Approval is not its question. During development it is the review of the pull request, under your team's rules, and no check reads it; at release the documents are signed and [`verify approval --release`](ci.md#signing-a-release) checks that. Exits non-zero and prints `FAIL [completion]` lines for each gap.
+`verify dhf` checks the rest: every item in `affected_items` exists, and a CR whose status is `completed` carries what its type requires of the move to `completed`, the criteria on that transition in `cr.yaml` (by default the four marked ✓ above), which `item transition CR-NNN completed` refuses on too. It is a warning, and an error under `--strict`; a project that changes the criteria there changes this check. A CR planned by hand records the fields with `medharness item update`.
+
+Approval is not their question. During development it is the review of the pull request, under your team's rules, and no check reads it; at release the documents are signed and [`verify approval --release`](ci.md#signing-a-release) checks that.
 
 ### Wiring it into GitHub Actions
 

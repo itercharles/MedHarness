@@ -146,10 +146,10 @@ class TestVerifyArguments:
         assert _run(project, "verify", "dhf", "--nope").exit_code == 2
 
     def test_a_missing_required_option_is_a_usage_error(self, project: Path) -> None:
-        assert _run(project, "verify", "completion").exit_code == 2
+        assert _run(project, "verify", "impact").exit_code == 2
 
-    def test_completion_of_an_unknown_cr_fails_with_json(self, project: Path) -> None:
-        result = _run(project, "verify", "completion", "--cr", "CR-999")
+    def test_tests_for_an_unknown_cr_fail_with_json(self, project: Path) -> None:
+        result = _run(project, "verify", "tests", "--cr", "CR-999")
         assert result.exit_code == 1 and _envelope(result)["errors"]
 
     @pytest.mark.dhf_links("SRS-033")

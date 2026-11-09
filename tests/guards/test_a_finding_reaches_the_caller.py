@@ -29,7 +29,6 @@ GATES = {
     "verify tests": ["--junit", "{dhf}"],
     "verify soup": ["--offline-mode", "warn"],
     "verify impact": ["--cr", "CR-001"],
-    "verify completion": ["--cr", "CR-001"],
 }
 
 #: stderr lines that report a finding. PASS records what held, not what failed.

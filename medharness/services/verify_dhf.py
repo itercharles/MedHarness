@@ -107,6 +107,7 @@ def ci_structural_gate(
                     })
         results["placeholders"] = _placeholders(adapter)
         results["invalid_statuses"] = _invalid_statuses(adapter)
+        results["completed_but_unmet"] = _completed_but_unmet(adapter)
     except Exception as exc:  # noqa: BLE001
         # Say so. Swallowing this reported "no verification_criteria gaps"
         # on a DHF whose items could not be read — a pass indistinguishable
@@ -135,6 +136,19 @@ def _invalid_statuses(adapter) -> list[dict]:
         status = item.get("status")
         if status and allowed is not None and status not in allowed:
             found.append({"id": item["id"], "type": item["type"], "status": status, "allowed": sorted(allowed)})
+    return found
+
+
+def _completed_but_unmet(adapter) -> list[dict]:
+    """Items whose status is `completed` while the criteria of the move into it are not met: a hand-edited status."""
+    from medharness.services.verify_release import RELEASABLE_STATE
+
+    found = []
+    for item in adapter.list_items():
+        if item.get("status") == RELEASABLE_STATE:
+            unmet = adapter.unmet_criteria(item["id"], RELEASABLE_STATE)
+            if unmet:
+                found.append({"id": item["id"], "unmet": unmet})
     return found
 
 
@@ -218,6 +232,13 @@ def structural_findings(results: dict, dhf_path: Path, strict: bool) -> list[dic
         add("status", "error", f"{bad['id']}.status",
             f"{bad['id']}: status '{bad['status']}' is not a state of {bad['type']} (one of {', '.join(bad['allowed'])})",
             f"{update} {bad['id']} --data '{{\"status\": \"{bad['allowed'][0]}\"}}'")
+    # A CR that says it is done and lacks what finishing it asks is a claim nothing backs; like an
+    # uncovered item it advises, and blocks under --strict. A release asks again regardless.
+    for done in results.get("completed_but_unmet", []):
+        first = done["unmet"][0]
+        add("completed", "error" if strict else "warning", f"{done['id']}.{first['field']}",
+            f"{done['id']}: completed, but " + "; ".join(f"`{c['field']}` is not recorded ({c['name']})" for c in done["unmet"]),
+            f"{update} {done['id']} --data '{{\"{first['field']}\": \"<the record>\"}}'")
     # Content that still says nothing is design to be written, like an uncovered
     # item: it advises, and blocks under --strict.
     for p in results.get("placeholders", []):

@@ -17,7 +17,7 @@ product does is not finished until its DHF is.
 5. **Build it:** run `medharness build code --cr CR-NNN --prompt` and do what it says.
 6. **Check it again**, and fix what each reports:
    - `medharness verify impact --cr CR-NNN --code-path src/`
-   - `medharness verify completion --cr CR-NNN --junit <results>`
+   - `medharness verify tests --cr CR-NNN --junit <results>`
 
 ## Rules
 
