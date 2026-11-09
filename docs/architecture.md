@@ -102,7 +102,7 @@ point in the `dhfkit.adapters` group, named for its `type`; it is called with
 in-memory adapter that runs the same commands.
 
 What depends on items being files in Git, and so refuses another adapter with a
-message naming the store: `verify changes`, `verify impact`, `build plan` and `build code`, which
+message naming the store: `verify impact`, `build plan` and `build code`, which
 read the branch's diff. Everything else — `item`, `verify dhf|tests|soup|completion`,
 `build soup`, `build release` — runs on any adapter.
 
@@ -211,14 +211,14 @@ that variable; it needs no API key, and none is sent.
 | `services/prompt_assembly.py` | Loads prompts from `medharness/prompts/` and renders `services/context.py` into them |
 | `services/cr_impact.py` | Writes `affected_items` back onto the CR |
 | `services/design_validation.py` | The deterministic check after each design pass; `impact_findings` is the part `verify impact` shares |
-| `services/verify_impact.py` | `verify impact`: the CR's record of its impact, judged by `impact_findings` against the branch's diff |
+| `services/verify_impact.py` | `verify impact`: the CR's record of its impact, judged by `impact_findings`, and the branch's diff against its `affected_items`, judged by `judge_branch` |
 
-## `verify changes`: a reader and a judge
+## `verify impact`: a reader and a judge
 
-`services/verify_changes.py` `validate_atomic_branch` reads the diff and hands plain values
-to `judge_branch(cr_id, cr_item, dhf_item_changes, code_changes)`, which decides
-and touches nothing. Test a rule by calling the judge with the values you want;
-patch the reader only to test the reading itself.
+`services/verify_impact.py` `verify_impact` reads the diff and hands plain values
+to `judge_branch(cr_id, cr_item, dhf_item_changes, code_changes)`, which decides whether the branch
+matches the CR's `affected_items` and touches nothing. Test a rule by calling the judge with the values
+you want; patch the reader only to test the reading itself.
 
 ## Tests
 

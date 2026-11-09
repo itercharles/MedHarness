@@ -29,7 +29,7 @@ from dhfkit.models.item import Item
 
 class DHFAdapter(Protocol):
     #: True when items are files in the project's Git repository. Commands that
-    #: read the repository's diff (`verify changes`, `build plan`, `build code`)
+    #: read the repository's diff (`verify impact`, `build plan`, `build code`)
     #: need it; without it they say so instead of answering wrongly.
     tracks_files: bool
 

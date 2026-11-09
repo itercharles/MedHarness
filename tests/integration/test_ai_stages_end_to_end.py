@@ -181,8 +181,8 @@ class TestBuildPlan:
 
         assert result.exit_code == 0, result.stderr
         assert _report(result)["errors"] == []
-        changes = _run("verify", "changes", "--cr", "CR-001")
-        assert "since origin/trunk" in json.loads(changes.stdout.splitlines()[0])["summary"]
+        impact = _run("verify", "impact", "--cr", "CR-001")
+        assert "since origin/trunk" in json.loads(impact.stdout.splitlines()[0])["summary"]
 
     def test_a_design_that_leaves_out_an_item_it_records_is_fixed_in_a_second_pass(
         self, project: Path, tmp_path: Path,

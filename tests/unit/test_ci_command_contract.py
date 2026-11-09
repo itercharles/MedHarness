@@ -88,7 +88,7 @@ class TestValidateBranchJsonContract:
         from medharness.services.envelope import ENVELOPE_KEYS, envelope_from
 
         runner = CliRunner()
-        branch_result = envelope_from("verify changes", {
+        branch_result = envelope_from("verify impact", {
             "cr_id": "CR-500",
             "since_ref": "origin/main",
             "passed": True,
@@ -100,11 +100,11 @@ class TestValidateBranchJsonContract:
             "errors": [],
             "findings": [],
         })
-        with patch("medharness.services.verify_changes.validate_atomic_branch", return_value=branch_result):
-            r = runner.invoke(main, ["--dhf", str(dhf), "verify", "changes", "--cr", "CR-500"])
+        with patch("medharness.services.verify_impact.verify_impact", return_value=branch_result):
+            r = runner.invoke(main, ["--dhf", str(dhf), "verify", "impact", "--cr", "CR-500"])
         assert r.exit_code == 0, (r.output, r.stderr)
         payload = _split_stdout_json(r.stdout)
-        assert set(payload) == set(ENVELOPE_KEYS), "verify changes left the envelope"
+        assert set(payload) == set(ENVELOPE_KEYS), "verify impact left the envelope"
         assert payload["passed"] is True
 
 
@@ -117,7 +117,7 @@ class TestValidateBranchJsonContract:
         from medharness.services.envelope import envelope_from
 
         finding = {"field": "code_branch", "issue": "x", "fix": "y"}
-        branch_result = envelope_from("verify changes", {
+        branch_result = envelope_from("verify impact", {
             "cr_id": "CR-501",
             "since_ref": "origin/main",
             "passed": False,
@@ -129,8 +129,8 @@ class TestValidateBranchJsonContract:
             "findings": [finding],
         })
         runner = CliRunner()
-        with patch("medharness.services.verify_changes.validate_atomic_branch", return_value=branch_result):
-            r = runner.invoke(main, ["--dhf", str(dhf), "verify", "changes", "--cr", "CR-501"])
+        with patch("medharness.services.verify_impact.verify_impact", return_value=branch_result):
+            r = runner.invoke(main, ["--dhf", str(dhf), "verify", "impact", "--cr", "CR-501"])
         assert r.exit_code == 1
         payload = _split_stdout_json(r.stdout)
         assert payload["passed"] is False

@@ -113,7 +113,7 @@ defaults again, delete the copies you have not changed.
 By default every command reads one YAML file per item under `DHF/items/`, so a team whose requirements
 live in another tool exports them into that format and runs the same commands. To read the tool directly
 instead, an installed adapter is chosen with `store:` in `global.yaml` (see
-[architecture.md](architecture.md#item-adapters)); `verify changes`, `build plan` and `build code` need
+[architecture.md](architecture.md#item-adapters)); `verify impact`, `build plan` and `build code` need
 the files in Git and refuse another store.
 
 - The file is named anything ending `.yaml`; the directory under `items/` does not matter.

@@ -29,14 +29,14 @@ RETIRED_GROUPS = ("change", "automation", "soup-sync", "upgrade", "context", "do
 #: old invocation -> what replaced it.
 RENAMED = {
     "change verify-completion": "verify completion",
-    "change verify-branch": "verify changes",
+    "change verify-branch": "verify impact",
     "change verify-approval": "GitHub branch protection",
     "change plan": "build plan",
     "change implement": "build code",
     "automation github-event": "the workflow's own `if:`",
     # 0.33.0. Both named the object; the commands ask a question about it.
     "workflow approval": "GitHub branch protection",
-    "workflow branch": "verify changes",
+    "workflow branch": "verify impact",
     # 0.37.0 folded three context commands into one; 0.39.0 removed it, since
     # the AI stages call services.context directly and nothing ran the command.
     "context overview": "medharness item list",
@@ -62,7 +62,7 @@ RENAMED = {
     "dhfkit init": "medharness init",
     # 0.47.0. The diff check runs locally too, so it is a verify; approval is
     # what GitHub's branch protection already enforces.
-    "workflow check-changes": "verify changes",
+    "workflow check-changes": "verify impact",
     "workflow check-approval": "GitHub branch protection",
 }
 

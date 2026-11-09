@@ -352,7 +352,7 @@ class ItemStore:
 
     @property
     def tracks_files(self) -> bool:
-        """Whether items are files in Git, which `verify changes` and the build stages read."""
+        """Whether items are files in Git, which `verify impact` and the build stages read."""
         return bool(getattr(self._adapter, "tracks_files", False))
 
     @property

@@ -1,6 +1,6 @@
 """A change reaches the items that depend on it, and `verify impact` says which.
 
-Changing SYS-001 passed `verify changes` although SRS-001, SYSARCH-001 and RCM-001 hang
+Changing SYS-001 passed `verify dhf` although SRS-001, SYSARCH-001 and RCM-001 hang
 off it untouched. Now an item that depends on a changed one, through a typed link in a
 traceability chain, must be changed too or listed in the CR's `reviewed_items`.
 """

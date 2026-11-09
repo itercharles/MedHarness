@@ -154,8 +154,8 @@ class TestVerifyArguments:
 
     @pytest.mark.dhf_links("SRS-033")
     @pytest.mark.dhf_testing("T2")
-    def test_changes_against_a_ref_that_does_not_exist_fails_with_json(self, project: Path) -> None:
-        result = _run(project, "verify", "changes", "--cr", "CR-001", "--since-ref", "no-such-ref")
+    def test_impact_against_a_ref_that_does_not_exist_fails_with_json(self, project: Path) -> None:
+        result = _run(project, "verify", "impact", "--cr", "CR-001", "--since-ref", "no-such-ref")
         assert result.exit_code == 1
         assert any("no-such-ref" in e for e in _envelope(result)["errors"])
 

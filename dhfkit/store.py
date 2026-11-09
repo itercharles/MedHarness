@@ -24,7 +24,7 @@ class DHFStore(Protocol):
 
     @property
     def tracks_files(self) -> bool:
-        """Whether items are files in Git; what `verify changes` and the build stages read."""
+        """Whether items are files in Git; what `verify impact` and the build stages read."""
 
     # items
     def get_item(self, uid: str) -> Optional[dict]: ...

@@ -1,4 +1,4 @@
-"""`verify changes`: a branch changes exactly the items its CR lists (SRS-030 to SRS-034).
+"""`verify impact`, the branch against its CR's `affected_items` (SRS-030 to SRS-034).
 
 The seeded project covers SRS-030 T4, SRS-031 T2 and SRS-034 T3.
 """
@@ -29,21 +29,25 @@ def promised_nothing(root: Path) -> None:
 
 
 def _changes(root: Path, *args: str, since: str = "main") -> tuple[int, dict, str]:
-    return invoke(root, "verify", "changes", "--cr", "CR-001", "--since-ref", since, *args)
+    return invoke(root, "verify", "impact", "--cr", "CR-001", "--since-ref", since, *args)
+
+
+def _branch_errors(answer: dict) -> list[str]:
+    return [e for e in answer["errors"] if e.startswith(("dhf_branch", "code_branch"))]
 
 
 def _fails(root: Path, *needles: str, args: tuple[str, ...] = ()) -> dict:
     code, answer, _ = _changes(root, *args)
     check(code == 1 and answer["passed"] is False, f"exited {code} with passed={answer['passed']}: {answer['errors']}")
     for needle in needles:
-        check(any(needle in e for e in answer["errors"]), f"no error says {needle!r}: {answer['errors']}")
+        check(any(needle in e for e in _branch_errors(answer)), f"no branch error says {needle!r}: {answer['errors']}")
     return answer
 
 
 def _passes(root: Path, *args: str) -> None:
-    code, answer, _ = _changes(root, *args)
-    check(code == 0 and answer["passed"] is True and answer["errors"] == [],
-          f"exited {code}; errors: {answer['errors']}")
+    """The branch matches the CR; what else `verify impact` finds in a starter CR is not this point's."""
+    _, answer, _ = _changes(root, *args)
+    check(not _branch_errors(answer), f"a branch finding was made: {answer['errors']}")
 
 
 def _copy_as(root: Path, uid: str, new: str) -> None:

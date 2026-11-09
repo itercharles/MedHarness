@@ -1,7 +1,7 @@
 """A verify command answers from what is on the machine: the DHF and the working tree.
 
 The old rules drew the line at "does it need a CR", then at "does it read Git".
-Both put `verify changes` — a diff of the working tree, which a developer runs
+Both put `verify impact` — a diff of the working tree, which a developer runs
 before committing — in a CI-only group. The line that matters is GitHub: a
 `verify` command runs on a laptop with no remote and no PR, so it may read the
 local repository but never the pull request.

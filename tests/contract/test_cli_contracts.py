@@ -73,9 +73,9 @@ class TestCRGenerationCommands:
         assert r.returncode == 0, r.stderr
 
 
-    def test_check_changes_help(self):
-        """medharness verify changes --help exits 0."""
-        r = _run("medharness", "verify", "changes", "--help")
+    def test_verify_impact_help(self):
+        """medharness verify impact --help exits 0."""
+        r = _run("medharness", "verify", "impact", "--help")
         assert r.returncode == 0, r.stderr
 
     def test_develop_cr_requires_cr_flag(self):
@@ -94,8 +94,8 @@ class TestCRGenerationCommands:
         assert r.returncode != 0
 
     def test_validate_branch_requires_cr_flag(self):
-        """medharness verify changes without --cr exits non-zero."""
-        r = _run("medharness", "verify", "changes")
+        """medharness verify impact without --cr exits non-zero."""
+        r = _run("medharness", "verify", "impact")
         assert r.returncode != 0
 
     def test_develop_cr_accepts_pr_flag(self):
@@ -105,14 +105,14 @@ class TestCRGenerationCommands:
 
 
     def test_validate_branch_accepts_code_path_flag(self):
-        """medharness verify changes --help shows --code-path option."""
-        r = _run("medharness", "verify", "changes", "--help")
+        """medharness verify impact --help shows --code-path option."""
+        r = _run("medharness", "verify", "impact", "--help")
         assert "--code-path" in r.stdout
 
     def test_commands_appear_in_help_groups(self):
         """Each verb lists its own commands, so `--help` finds them all."""
         expected = {
-            "verify": ["dhf", "tests", "soup", "completion", "changes"],
+            "verify": ["dhf", "tests", "soup", "completion", "impact"],
             "build": ["plan", "code", "soup", "release"],
         }
         for verb, commands in expected.items():

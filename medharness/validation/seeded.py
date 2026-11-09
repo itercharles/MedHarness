@@ -98,8 +98,7 @@ def stopped_by(repo: Path) -> dict[str, list[str]]:
     commands = {
         "verify dhf": ["verify", "dhf"],
         "verify tests": ["verify", "tests", "--junit", junit],
-        "verify changes": ["verify", "changes", "--cr", "CR-001", "--since-ref", "main", "--code-path", "src"],
-        "verify impact": ["verify", "impact", "--cr", "CR-001", "--since-ref", "main"],
+        "verify impact": ["verify", "impact", "--cr", "CR-001", "--since-ref", "main", "--code-path", "src"],
         "verify completion": ["verify", "completion", "--cr", "CR-001", "--junit", junit],
     }
     stopped = {}
@@ -190,12 +189,14 @@ def _the_honest_change_passes(repo: Path) -> None:
     check(stopped == {}, f"the honest change was stopped: {stopped}")
 
 
-def _stops(omit: Callable[[Path], None], gate: str) -> Callable[[Path], None]:
+def _stops(omit: Callable[[Path], None], gate: str, finding: str = "") -> Callable[[Path], None]:
     def run(repo: Path) -> None:
         omit(repo)
         stopped = stopped_by(repo)
         check(gate in stopped, f"{omit.__name__} ({omit.__doc__}) was not stopped by `{gate}`; "
                                f"stopped by: {sorted(stopped) or 'nothing'}")
+        check(any(e.startswith(finding) for e in stopped[gate]),
+              f"{omit.__name__} was stopped by `{gate}`, but not by a `{finding}` finding: {stopped[gate]}")
     return run
 
 
@@ -207,12 +208,15 @@ STOPPED = [
     (code_changed_without_a_requirement, "verify impact", "SRS-010", "T4"),
     (code_changed_outside_the_declared_scope, "verify impact", "SRS-011", "T3"),
     (rejected_to_skip_the_checks, "verify impact", "SRS-012", "T3"),
-    (undeclared_item_change, "verify changes", "SRS-030", "T4"),
-    (declared_item_not_changed, "verify changes", "SRS-031", "T2"),
+    (undeclared_item_change, "verify impact", "SRS-030", "T4"),
+    (declared_item_not_changed, "verify impact", "SRS-031", "T2"),
 ]
+
+#: The omissions that must be stopped by a finding of the branch against `affected_items`.
+BRANCH_FINDINGS = {undeclared_item_change, declared_item_not_changed}
 
 CASES = [
     Case("the_honest_change_passes_every_gate", "SRS-034", ("T3",), honest_change, _the_honest_change_passes),
-    *(Case(omit.__name__, requirement, (point,), honest_change, _stops(omit, gate))
+    *(Case(omit.__name__, requirement, (point,), honest_change, _stops(omit, gate, "dhf_branch" if omit in BRANCH_FINDINGS else ""))
       for omit, gate, requirement, point in STOPPED),
 ]

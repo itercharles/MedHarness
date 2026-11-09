@@ -37,7 +37,6 @@ GATE_ARGS = {
     "verify tests": ["--junit", "{dhf}"],
     "verify completion": ["--cr", "CR-001"],
     "verify impact": ["--cr", "CR-001"],
-    "verify changes": ["--cr", "CR-001"],
 }
 
 
@@ -47,7 +46,7 @@ def _run_gate(command: str, dhf) -> dict:
     Deliberately not CliRunner: it captures an exception raised *after* the JSON
     line is written, so a command that prints its result and then crashes looks
     identical to one that succeeded. Two crashes shipped behind exactly that —
-    `verify classification` on a missing plan and `verify changes` on any failure.
+    `verify classification` on a missing plan and `verify impact` on any failure.
     """
     import subprocess
     import sys
@@ -81,7 +80,7 @@ def _call(name: str, dhf: Path):
 class TestEveryCLIGateHonoursTheContract:
     """All nine, not just the four callable with a bare path.
 
-    An earlier version parametrised only SIMPLE_GATES, so `verify changes` shipped
+    An earlier version parametrised only SIMPLE_GATES, so `verify impact` shipped
     with dicts in `errors` and `verify tests` failed with nothing in it —
     both invisible to a test that never called them.
     """
@@ -158,7 +157,6 @@ class TestNoGateEscapesTheEnvelope:
             "verify tests": ["--junit", str(dhf)],
             "verify completion": ["--cr", "CR-001"],
             "verify impact": ["--cr", "CR-001"],
-            "verify changes": ["--cr", "CR-001"],
         }
         offenders = []
         for gate in GATES:
@@ -281,7 +279,7 @@ class TestFailurePathsHonourTheContract:
     """
 
     FAILING = ("verify dhf", "verify tests",
-               "verify completion", "verify impact", "verify changes")
+               "verify completion", "verify impact")
 
     @pytest.mark.parametrize("command", FAILING)
     def test_no_crash_on_the_failure_path(self, command: str, failing_dhf: Path) -> None:
@@ -370,7 +368,7 @@ class TestStderrCarriesTheEnvelope:
     """
 
     ALL = ("verify dhf", "verify tests",
-           "verify completion", "verify impact", "verify changes")
+           "verify completion", "verify impact")
 
     @pytest.mark.parametrize("command", ALL)
     def test_stderr_reports_the_envelope(self, command: str, failing_dhf: Path) -> None:

@@ -1,7 +1,7 @@
 """`verify impact`: the CR's record of its impact, judged on whatever is on the machine.
 
 `build plan` makes this judgement before it finishes; a coding agent that wrote the record itself had no
-command that made it, and handed in a design `verify dhf` and `verify changes` passed and `build plan` would
+command that made it, and handed in a design `verify dhf` passed and `build plan` would
 have refused (an anchor neither changed nor reviewed).
 """
 
@@ -96,7 +96,7 @@ def test_a_cr_with_no_impact_analysis_fails_naming_what_is_missing(repo: Path) -
 @pytest.mark.dhf_links("SRS-013")
 @pytest.mark.dhf_testing("T2")
 def test_an_anchor_nobody_settled_fails(repo: Path) -> None:
-    """The record `verify dhf` and `verify changes` both passed, and `build plan` refused."""
+    """The record `verify dhf` passed, and `build plan` refused."""
     _edit(repo, "CR-001.yaml", impact_analysis=_analysis(
         anchors=[{"id": "SYS-001", "evidence": "x"}, {"id": "UC-001", "evidence": "named in the request"}]))
     result, answer = _impact(repo)
@@ -154,12 +154,6 @@ def test_a_ref_that_cannot_be_reached_is_not_an_empty_diff(repo: Path) -> None:
     assert result.exit_code == 1 and answer["errors"][0].startswith("diff_unavailable:")
 
 
-def test_verify_changes_no_longer_judges_impact(repo: Path) -> None:
-    _edit(repo, "CR-001.yaml", reviewed_items=[])
-    result, answer = _run(repo, "verify", "changes", "--cr", "CR-001", "--since-ref", "main")
-    assert result.exit_code == 0, answer["errors"]
-
-
 @pytest.mark.dhf_links("SRS-008")
 @pytest.mark.dhf_testing("T1")
 def test_a_changed_requirement_whose_parent_nobody_settled_fails(repo: Path) -> None:
@@ -195,3 +189,136 @@ def test_a_new_item_of_a_type_with_no_title_or_content_is_not_a_possible_duplica
     (soup / "SOUP-002.yaml").write_text(yaml.safe_dump({**existing, "id": "SOUP-002", "name": "another-library"}))
     _, answer = _impact(repo)
     assert not [w for w in answer["warnings"] if w.startswith("possible_duplicate")], answer["warnings"]
+
+
+def _branch_errors(answer: dict) -> list[str]:
+    return [e for e in answer["errors"] if e.startswith(("dhf_branch", "code_branch"))]
+
+
+def _item(repo: Path, uid: str) -> Path:
+    return next((repo / "DHF" / "items").rglob(f"{uid}.yaml"))
+
+
+def _copy_item(repo: Path, uid: str, new: str) -> None:
+    source = _item(repo, uid)
+    (source.parent / f"{new}.yaml").write_text(source.read_text().replace(uid, new))
+
+
+def _write_code(repo: Path) -> None:
+    (repo / "src").mkdir(exist_ok=True)
+    (repo / "src" / "dose.py").write_text("def dose(mu):\n    return mu\n")
+
+
+@pytest.mark.dhf_links("SRS-030")
+@pytest.mark.dhf_testing("T1")
+def test_an_item_the_branch_updates_and_the_cr_does_not_list_fails(repo: Path) -> None:
+    _edit(repo, "UC-001.yaml", content="A use case the request never mentioned.")
+    result, answer = _impact(repo)
+    assert result.exit_code == 1
+    assert any("UC-001" in e and "does not list" in e for e in _branch_errors(answer)), answer["errors"]
+
+
+@pytest.mark.dhf_links("SRS-030")
+@pytest.mark.dhf_testing("T2")
+@pytest.mark.parametrize("change", ["create", "delete"])
+def test_an_item_the_branch_creates_or_deletes_and_the_cr_does_not_list_fails(repo: Path, change: str) -> None:
+    if change == "create":
+        _copy_item(repo, "SRS-001", "SRS-002")
+    else:
+        _item(repo, "UC-001").unlink()
+    result, answer = _impact(repo)
+    named = "SRS-002" if change == "create" else "UC-001"
+    assert result.exit_code == 1
+    assert any(named in e and "does not list" in e for e in _branch_errors(answer)), answer["errors"]
+
+
+@pytest.mark.dhf_links("SRS-030")
+@pytest.mark.dhf_testing("T3")
+def test_the_cr_need_not_list_itself(repo: Path) -> None:
+    _, answer = _impact(repo)
+    assert "CR-001" not in " ".join(_branch_errors(answer)) and _branch_errors(answer) == []
+
+
+@pytest.mark.dhf_links("SRS-031")
+@pytest.mark.dhf_testing("T1")
+def test_a_listed_item_the_branch_leaves_alone_fails(repo: Path) -> None:
+    _edit(repo, "CR-001.yaml", affected_items=["SYS-001", "SRS-001"])
+    result, answer = _impact(repo)
+    assert result.exit_code == 1
+    assert any("SRS-001" in e and "does not change them" in e for e in _branch_errors(answer)), answer["errors"]
+
+
+@pytest.mark.dhf_links("SRS-031")
+@pytest.mark.dhf_testing("T3")
+def test_a_cr_that_lists_nothing_on_a_branch_that_changes_nothing_fails(repo: Path) -> None:
+    for uid in ("SYS-001", "CR-001"):
+        _git(repo, "checkout", "main", "--", str(_item(repo, uid).relative_to(repo)))
+    _edit(repo, "CR-001.yaml", affected_items=[])
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-qm", "the CR lists nothing")
+    _git(repo, "checkout", "-q", "-b", "empty")
+    _git(repo, "branch", "-f", "main", "HEAD")
+    result, answer = _impact(repo)
+    assert result.exit_code == 1
+    assert any("lists no affected_items" in e for e in _branch_errors(answer)), answer["errors"]
+
+
+@pytest.mark.dhf_links("SRS-032")
+@pytest.mark.dhf_testing("T1")
+def test_no_changed_file_under_the_code_path_fails(repo: Path) -> None:
+    result, answer = _impact(repo, "CR-001", "--code-path", "src")
+    assert result.exit_code == 1
+    assert any(e.startswith("code_branch") and "src" in e for e in answer["errors"]), answer["errors"]
+
+
+@pytest.mark.dhf_links("SRS-032")
+@pytest.mark.dhf_testing("T2")
+def test_a_changed_file_under_the_code_path_satisfies_it(repo: Path) -> None:
+    _write_code(repo)
+    _, answer = _impact(repo, "CR-001", "--code-path", "src")
+    assert not [e for e in answer["errors"] if e.startswith("code_branch")], answer["errors"]
+
+
+@pytest.mark.dhf_links("SRS-032")
+@pytest.mark.dhf_testing("T3")
+def test_without_a_code_path_code_is_not_looked_at(repo: Path) -> None:
+    _, answer = _impact(repo)
+    assert not [e for e in answer["errors"] if e.startswith("code_branch")], answer["errors"]
+
+
+@pytest.mark.dhf_links("SRS-033")
+@pytest.mark.dhf_testing("T1")
+@pytest.mark.parametrize("listed", [["SYS-001"], []], ids=["promised SYS-001", "promised nothing"])
+def test_an_unreachable_ref_is_reported_and_does_not_accuse_the_cr(repo: Path, listed: list[str]) -> None:
+    _edit(repo, "CR-001.yaml", affected_items=listed)
+    result, answer = _run(repo, "verify", "impact", "--cr", "CR-001", "--since-ref", "origin/nowhere")
+    assert result.exit_code == 1
+    assert answer["errors"] == [
+        a for a in answer["errors"] if a.startswith("diff_unavailable:") and "origin/nowhere" in a]
+    assert not _branch_errors(answer)
+
+
+@pytest.mark.dhf_links("SRS-034")
+@pytest.mark.dhf_testing("T1")
+def test_a_branch_that_creates_and_updates_exactly_what_the_cr_lists_draws_no_branch_finding(repo: Path) -> None:
+    _copy_item(repo, "SRS-001", "SRS-002")
+    _edit(repo, "CR-001.yaml", affected_items=["SYS-001", "SRS-002"])
+    _, answer = _impact(repo)
+    assert _branch_errors(answer) == []
+
+
+@pytest.mark.dhf_links("SRS-034")
+@pytest.mark.dhf_testing("T2")
+def test_a_deleted_item_counts_as_changed(repo: Path) -> None:
+    _item(repo, "UC-001").unlink()
+    _edit(repo, "CR-001.yaml", affected_items=["SYS-001", "UC-001"])
+    _, answer = _impact(repo)
+    assert _branch_errors(answer) == []
+
+
+@pytest.mark.dhf_links("SRS-034")
+@pytest.mark.dhf_testing("T3")
+def test_uncommitted_changes_to_listed_items_and_code_draw_no_branch_finding(repo: Path) -> None:
+    _write_code(repo)
+    _, answer = _impact(repo, "CR-001", "--code-path", "src")
+    assert _branch_errors(answer) == []
