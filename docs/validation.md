@@ -19,7 +19,7 @@ The risk is what a wrong **pass** would cause: a command that fails something so
 
 | Risk | Commands | A wrong pass means |
 |---|---|---|
-| High | `verify completion`, `verify tests`, `verify approval --release`, `build release`, `verify impact`, `verify changes`, `verify dhf` | unverified, unapproved or untraced content is released, or an omission is hidden |
+| High | `verify completion`, `verify tests`, `verify approval --release`, `build release`, `verify impact`, `verify dhf` | unverified, unapproved or untraced content is released, or an omission is hidden |
 | Medium | `verify soup`, `item transition`, `item create` / `update`, `verify approval` without `--release`, `build approvals`, `build soup`, `build validation` | wrong data or a missed vulnerability, which a later gate checks again; for `build validation`, a user's validation evidence that overstates, while the release's own suite still verifies every gate |
 | Low | `item get` / `list`, `init` | nothing evidence depends on |
 | Out of scope | `build plan`, `build code` | AI proposals, not relied on |
@@ -56,7 +56,7 @@ CI runs exactly this in the job `Own DHF - all tests pass, every requirement ver
 | `verify impact` | SRS-007 to SRS-015 | covered |
 | `verify approval --release` (and the approval log and approvers list it relies on) | SRS-016 to SRS-023 | covered |
 | `verify tests` | SRS-024 to SRS-029 | covered |
-| `verify changes` | SRS-030 to SRS-034 | covered |
+| `verify impact`, the branch against `affected_items` | SRS-030 to SRS-034 | covered |
 | `verify dhf` | SRS-035 to SRS-042 | covered |
 | `build release` | SRS-043 to SRS-050 | covered |
 | `verify soup` | SRS-051 to SRS-054 | covered |
@@ -85,7 +85,7 @@ The set exercises every test point of the high-risk requirements, 175 points, ea
 | `medharness/validation/impact.py` | `verify impact`, every point the seeded project does not cover | SRS-007 to SRS-015 (22) |
 | `medharness/validation/approval.py` | `verify approval`, every point, with throwaway SSH keys (`medharness/validation/signing.py`); needs `ssh-keygen` | SRS-016 to SRS-023 (31) |
 | `medharness/validation/verification.py` | `verify tests`, every point | SRS-024 to SRS-029 (20) |
-| `medharness/validation/changes.py` | `verify changes`, every point the seeded project does not cover; a store that keeps no item files is an adapter installed for the case through a real entry point | SRS-030 to SRS-034 (13) |
+| `medharness/validation/changes.py` | `verify impact`, the branch against `affected_items`, every point the seeded project does not cover; a store that keeps no item files is an adapter installed for the case through a real entry point | SRS-030 to SRS-034 (13) |
 | `medharness/validation/structure.py` | `verify dhf`, every point; a check that could not run is shown by making the store fail after its first read | SRS-035 to SRS-042 (27) |
 | `medharness/validation/release.py` | `build release`, every point | SRS-043 to SRS-050 (26) |
 

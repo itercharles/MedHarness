@@ -50,7 +50,7 @@ global_lifecycle:
     label: Closed
     action_label: Close
     is_stable: true
-# How many links from an item a change reaches. `verify changes` fails when an item
+# How many links from an item a change reaches. `verify impact` fails when an item
 # that depends on a changed one is neither changed nor listed in the CR's
 # `reviewed_items`; 0 turns the check off.
 impact_depth: 1

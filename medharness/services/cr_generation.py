@@ -368,7 +368,7 @@ def generate_code(
 
     run.leave_uncommitted()
     # Implementing may reconcile SWDD or SRS; the CR's record has to follow, or
-    # `verify changes` finds the branch changing items it does not list.
+    # `verify impact` finds the branch changing items it does not list.
     items_changed = run.items_changed()
     if run.unreadable:
         run.warnings.append(_warning("diff_unavailable", f"affected_items not updated: {run.unreadable[-1]}"))

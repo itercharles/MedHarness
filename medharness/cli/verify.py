@@ -159,64 +159,6 @@ def register(main):
         if not result["passed"]:
             raise click.ClickException(f"CR {cr_id} closure verification failed.")
 
-    @verify.command("changes")
-    @click.option("--cr", "cr_id", required=True, metavar="CR_ID",
-                  help="The CR whose affected_items the branch must change.")
-    @click.option("--since-ref", default=None, metavar="REF",
-                  help="What the branch is compared against: its changes since it left this ref. "
-                       "Default: the branch origin's HEAD points at, else origin/main. "
-                       "Needs enough history to reach the fork.")
-    @click.option("--code-path", "code_paths", multiple=True, metavar="PATH",
-                  help="Opt into code-change enforcement: path(s) under which at least one file must be modified. "
-                       "Omitting this option skips the code-change check entirely.")
-    @click.pass_context
-    def verify_changes(
-        ctx: click.Context,
-        cr_id: str,
-        since_ref: str | None,
-        code_paths: tuple[str, ...],
-    ) -> None:
-        """Check the branch changed the items the CR said it would.
-
-        Reads `affected_items` off the CR and diffs the branch against
-        `--since-ref`. An item the CR promised that the branch never touches
-        fails, and so does a CR that promised nothing and changed no DHF item
-        at all — that means `build plan` never ran.
-
-        `--code-path src/` adds a second requirement: at least one file under
-        those paths must have changed too. Without the flag that check is
-        skipped, so a design-only branch passes.
-
-        Compares the working tree, so it runs locally before anything is
-        committed as well as in CI. Needs a reachable `--since-ref`.
-        """
-        from medharness.services.verify_changes import validate_atomic_branch  # noqa: PLC0415
-
-        dhf_path: Path = ctx.obj["dhf"]
-        repo_root = dhf_path.resolve().parent
-        payload = validate_atomic_branch(
-            repo_root,
-            dhf_path,
-            cr_id,
-            since_ref=since_ref,
-            code_paths=code_paths,
-        )
-        emit(payload)
-        if payload["passed"]:
-            if code_paths:
-                click.echo(f"PASS [changes] {cr_id}: branch carries coupled DHF and code changes.", err=True)
-            else:
-                click.echo(
-                    f"PASS [changes] {cr_id}: branch carries DHF changes "
-                    f"(pass --code-path to also enforce code changes).",
-                    err=True,
-                )
-            return
-        for error in details(payload).get("findings", []):
-            click.echo(f"FAIL [changes] {error['field']}: {error['issue']}", err=True)
-            click.echo(f"    Fix: {error['fix']}", err=True)
-        raise click.exceptions.Exit(1)
-
     @verify.command("impact")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID",
                   help="The CR whose record of its impact is checked against the branch.")
@@ -224,8 +166,11 @@ def register(main):
                   help="What the branch is compared against: its changes since it left this ref. "
                        "Default: the branch origin's HEAD points at, else origin/main. "
                        "Needs enough history to reach the fork.")
+    @click.option("--code-path", "code_paths", multiple=True, metavar="PATH",
+                  help="Also require a change to at least one file under PATH (repeatable). "
+                       "Omitted, code is not required, so a design-only branch passes.")
     @click.pass_context
-    def verify_impact(ctx: click.Context, cr_id: str, since_ref: str | None) -> None:
+    def verify_impact(ctx: click.Context, cr_id: str, since_ref: str | None, code_paths: tuple[str, ...]) -> None:
         """Check the CR's record of its impact against the items the branch changed.
 
         `impact_analysis` must be complete and evidenced (assumptions, anchors, every item
@@ -237,6 +182,11 @@ def register(main):
         item's risk controls must be settled the same way. Items that read like an existing one,
         grew by more than 40 lines, or changed wording without their test points are warnings.
 
+        The branch's DHF changes must also be exactly the CR's `affected_items`, apart from the CR itself:
+        an item the CR lists and the branch leaves alone fails, and so does one the branch changes and
+        the CR does not list. A CR that lists nothing on a branch that changes no item means `build plan`
+        never ran.
+
         This is the judgement `build plan` makes before it finishes. A CR that triage rejected
         has no design and is not checked. Compares the working tree, so it runs before anything
         is committed as well as in CI. Needs a reachable `--since-ref`.
@@ -244,7 +194,7 @@ def register(main):
         from medharness.services.verify_impact import verify_impact as run  # noqa: PLC0415
 
         dhf_path: Path = ctx.obj["dhf"]
-        payload = run(dhf_path.resolve().parent, dhf_path, cr_id, since_ref=since_ref)
+        payload = run(dhf_path.resolve().parent, dhf_path, cr_id, since_ref=since_ref, code_paths=code_paths)
         emit(payload)
         for warning in payload.get("warnings") or []:
             click.echo(f"WARN [impact] {warning}", err=True)

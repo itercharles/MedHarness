@@ -62,8 +62,7 @@ A pipeline that only checks exit status needs to parse nothing. If you parse, ch
 | `verify tests` | Requirement-to-test coverage from JUnit evidence, including declared test points. | no | `conditional` |
 | `verify soup` | The SOUP register against the dependency manifests, and each item against the OSV vulnerability database, honouring documented per-CVE acceptances. | yes | `conditional` |
 | `verify completion` | CR closure: mandatory CR fields, that the CR's affected_items exist, and verification evidence for each. | no | `always` |
-| `verify impact` | That the CR's record of its impact (impact_analysis, reviewed_items, affected_risk_items) is complete, evidenced and settles every item the branch's changes reach. | no | `always` |
-| `verify changes` | That the branch, uncommitted work included, changes exactly the items its CR lists, and code when asked. | no | `always` |
+| `verify impact` | That the CR's record of its impact (impact_analysis, reviewed_items, affected_risk_items) is complete, evidenced and settles every item the branch's changes reach, and that the branch changes exactly the items the CR lists. | no | `always` |
 | `verify approval` | That every approval is signed by an approver holding its roles, that approvals are only added, and that a change to the approvers list is approved from the list as it was. With --release: that each document of the release manifest and the release itself carry a current signature from their role. | no | `always` |
 <!-- END GENERATED: gates -->
 
@@ -108,7 +107,7 @@ Every check answers from the machine it runs on, and none reads GitHub. During d
 
 A link whose target does not exist (a typo, a deleted item) always fails; an item with no downstream child yet is normal mid-project and fails only under `--strict`.
 
-`verify changes` and `verify impact` compare the working tree, uncommitted and untracked files included, against `--since-ref` (default `origin/main`), which must be reachable: in CI, fetch it or check out with full history. `verify changes` checks that the branch changes exactly the items its CR lists. `verify impact` checks the CR's record of its impact: `impact_analysis` complete and evidenced, naming only items the DHF has, and every item the branch's changes reach either changed or listed in `reviewed_items`; what it reads is in [configuration.md](configuration.md#what-verify-impact-reads). A CR marked rejected (`triage_result.verdict: rejected`) is exempt only while its branch changes nothing but the CR.
+`verify impact` compares the working tree, uncommitted and untracked files included, against `--since-ref` (default `origin/main`), which must be reachable: in CI, fetch it or check out with full history. It checks that the branch changes exactly the items its CR lists in `affected_items` (and, with `--code-path`, that some file under it changed), and the CR's record of its impact: `impact_analysis` complete and evidenced, naming only items the DHF has, and every item the branch's changes reach either changed or listed in `reviewed_items`; what it reads is in [configuration.md](configuration.md#what-verify-impact-reads). A CR marked rejected (`triage_result.verdict: rejected`) is exempt only while its branch changes nothing but the CR.
 
 ---
 

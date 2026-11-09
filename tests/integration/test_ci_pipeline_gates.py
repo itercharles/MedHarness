@@ -2,7 +2,7 @@
 
 Covers the validation surface that does NOT require LLM calls:
   - verify dhf (ci_structural_gate): schema, traceability, structured reporting
-  - verify changes: DHF change detection, spec item existence
+  - verify impact: DHF change detection against the CR's affected_items
   - validate_generate_dhf: verification_criteria, V-model cascade completeness
   - ItemType display_name / code contract
 
@@ -108,7 +108,7 @@ class TestCiStructuralGate:
 
 
 # ---------------------------------------------------------------------------
-# verify changes — change detection and spec item existence
+# verify impact — the branch against the CR's affected_items
 # ---------------------------------------------------------------------------
 
 class TestValidateBranch:
@@ -120,9 +120,9 @@ class TestValidateBranch:
 
     @pytest.fixture(scope="class")
     def result(self, dhf):
-        from medharness.services.verify_changes import validate_atomic_branch
+        from medharness.services.verify_impact import verify_impact
 
-        return validate_atomic_branch(dhf, dhf / "DHF", "CR-001", since_ref="HEAD")
+        return verify_impact(dhf, dhf / "DHF", "CR-001", since_ref="HEAD")
 
     def test_clean_branch_has_no_dhf_changes(self, result):
         """A branch with no commits since HEAD has no DHF changes."""
@@ -135,10 +135,6 @@ class TestValidateBranch:
         """The command emits only `errors`, so a finding that is not one is lost."""
         assert result["errors"], "a failing gate with nothing in errors is unactionable"
         assert any("dhf_branch" in e for e in result["errors"])
-
-    def test_result_includes_dhf_item_changes(self, result):
-        changes = result["details"]["dhf_item_changes"]
-        assert "created" in changes and "updated" in changes and "deleted" in changes
 
     def test_result_records_what_it_was_asked(self, result):
         assert result["details"].get("cr_id") == "CR-001"

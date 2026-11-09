@@ -86,7 +86,7 @@ Every command and gate, against the promises (● serves it, ○ serves it indir
 |---|---|---|---|---|
 | `item` (CRUD, `transition`) | ● | | | Keep: foundation |
 | `verify dhf` | ● | | | Keep |
-| `verify changes` | ● | | ○ | Keep |
+| `verify changes` (folded into `verify impact` in 0.74.0) | ● | | ○ | Keep |
 | `verify tests` | ● | ● | | Keep |
 | `verify completion` | ● | ● | | Keep |
 | `build release` | | ● | | Keep |
@@ -110,7 +110,7 @@ What serves none of the promises:
 Gaps in promise 3, the input to iteration 2:
 
 - **G1. Code changes do not reach the impact check.** It starts from the DHF items a
-  branch changed; MODULE items name no code paths, and `verify changes --code-path` only
+  branch changed; MODULE items name no code paths, and `verify impact --code-path` only
   asks that some file changed. A CR that changes dose calculation while declaring an
   unrelated SRS passes every gate. Closed in #453.
 - **G2. A new hazard has no way in.** Risk closure follows existing RCM links; a hazard
@@ -134,8 +134,8 @@ tagged with their gap, so the test summary is the catch rate.
 |---|---|
 | Dependent left unreviewed | Stopped by `verify impact` |
 | Risk control left out | Stopped by `verify impact` |
-| Undeclared item change | Stopped by `verify changes` |
-| Declared item not changed | Stopped by `verify changes` |
+| Undeclared item change | Stopped by `verify impact` |
+| Declared item not changed | Stopped by `verify impact` |
 | Parent left unreviewed | Stopped by `verify impact` |
 | Changed requirement lost its test | Stopped by `verify tests` |
 | Test point left unchanged | Missed: a warning only |

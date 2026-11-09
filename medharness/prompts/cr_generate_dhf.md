@@ -143,7 +143,7 @@ Fix what it reports with `medharness item update` and run it again until it is c
 Then record the result on the CR in one update:
 
 - `affected_items` — every item you created or updated, not the CR itself.
-  `medharness verify changes --cr {{cr_id}}` compares this list with what the branch
+  `medharness verify impact --cr {{cr_id}}` compares this list with what the branch
   changes, in both directions.
 - `reviewed_items` — every item you examined and left unchanged that depends on a
   changed item or that a check may require. Each must have an `unchanged` entry.

@@ -132,7 +132,7 @@ class TestItemsInMemory:
 
 class TestWhatNeedsFilesSaysSo:
     @pytest.mark.parametrize("args", [
-        pytest.param(["verify", "changes", "--cr", "CR-001"],
+        pytest.param(["verify", "impact", "--cr", "CR-001"],
                      marks=[pytest.mark.dhf_links("SRS-033"), pytest.mark.dhf_testing("T3")]),
         ["build", "plan", "--cr", "CR-001"],
         ["build", "code", "--cr", "CR-001"],

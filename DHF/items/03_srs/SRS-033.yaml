@@ -1,7 +1,7 @@
 id: SRS-033
-title: verify changes never reads a diff it cannot take as no changes
+title: verify impact never reads a diff it cannot take as no changes
 risk: high
-content: '`verify changes` shall fail, and say it could not read the diff, when `--since-ref`
+content: '`verify impact` shall fail, and say it could not read the diff, when `--since-ref`
   cannot be reached or the items are not files in Git, and shall not report the CR
   as having broken its promise, so that an unchecked branch is not passed and a sound
   CR is not blamed.'

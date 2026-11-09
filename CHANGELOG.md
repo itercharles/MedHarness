@@ -11,8 +11,20 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.74.0] — 2026-11-09
+
+`verify changes` is folded into `verify impact`. Both compared the working tree with `--since-ref` against the CR's own record, and a caller ran them one after the other with the same arguments. Breaking.
+
+### Removed
+- `verify changes`. Its checks are part of `verify impact`: the branch's DHF changes must be exactly the CR's `affected_items`, apart from the CR itself, so an item the CR lists and the branch leaves alone fails, as does one the branch changes and the CR does not list; a CR that lists nothing on a branch that changes no item means `build plan` never ran. `verify impact --code-path PATH` requires a change under PATH, as `verify changes --code-path` did, and without it code is not looked at.
+- The `verify changes` report keys `promised_but_unchanged`, `unlisted_changes`, `cr_found`, `dhf_item_changes` and `code_changes`: the findings carry the same facts.
+
 ### Changed
+- A caller that ran both commands now runs `medharness verify impact --cr CR-NNN [--since-ref REF] [--code-path PATH]`. It passes only when the CR's impact record also holds, which `verify changes` never asked.
+- A CR that is not in the DHF fails `verify impact`; `verify changes` passed a branch whose CR it could not find.
+- A CR marked rejected is not held to its `affected_items` or to `--code-path`: it has no design, and `verify impact` already fails it if the branch changes anything beyond the CR.
 - The CI and release jobs are named for what they check ("Lockfile - uv.lock matches pyproject.toml", "Release 2 of 3 - full test suite on the tagged source") instead of "Check | Lockfile", "Test the tagged source". Nothing requires a check by name, so no setting needed changing.
+- SRS-030 to SRS-034 of the tool's own DHF now describe `verify impact`; their test points are unchanged, and `build validation` still passes all 175.
 
 ## [0.73.1] — 2026-11-08
 

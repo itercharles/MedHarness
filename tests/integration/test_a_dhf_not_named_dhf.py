@@ -1,7 +1,7 @@
 """`--dhf` names the DHF directory; nothing may assume it is called `DHF`.
 
 The branch diff looked under `DHF/items/` whatever `--dhf` said, so with the DHF in `Records/`
-`verify changes` reported every promised item as unchanged, and the prompts told the agent to
+`verify impact` reported every promised item as unchanged, and the prompts told the agent to
 run its commands against a directory that does not exist.
 """
 
@@ -46,11 +46,11 @@ def _edit(dhf: Path, name: str, **fields) -> None:
     path.write_text(yaml.safe_dump(data))
 
 
-def test_verify_changes_reads_the_items_of_the_dhf_it_is_given(records: Path) -> None:
+def test_verify_impact_reads_the_items_of_the_dhf_it_is_given(records: Path) -> None:
     _edit(records, "SRS-001.yaml", content="Changed.")
     _edit(records, "CR-001.yaml", affected_items=["SRS-001"], reviewed_items=["SWDD-001"])
 
-    result = CliRunner().invoke(main, ["--dhf", str(records), "verify", "changes", "--cr", "CR-001",
+    result = CliRunner().invoke(main, ["--dhf", str(records), "verify", "impact", "--cr", "CR-001",
                                        "--since-ref", "main"])
     errors = json.loads(result.stdout.splitlines()[0])["errors"]
     assert not [e for e in errors if "does not change" in e or "not change them" in e], errors
