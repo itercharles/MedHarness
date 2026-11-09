@@ -11,6 +11,12 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.75.1] — 2026-11-09
+
+### Fixed
+- `verify dhf` asked every completed CR for the fields closing it requires, including CRs a REL already lists. `build release` runs `verify dhf --strict`, so a project that baselined CRs completed before those fields existed, as `docs/adopting.md` advises, had its release fail on that history. A completed CR is now asked only until a REL lists it, the same set `build release` includes by default.
+- The documentation says what `verify impact` reads of `affected_items`, and that `--code-path` is its only code requirement.
+
 ## [0.75.0] — 2026-11-09
 
 `verify completion` is split between the two commands that already ask what it asked. It bundled three unrelated checks: whether the CR's fields were recorded (the question `item transition CR-NNN completed` already refuses on), whether its `affected_items` existed (`verify dhf` already reports a link to nothing), and whether the items it changed had passing tests (`verify tests` scoped to one CR's items, which it called). Breaking.

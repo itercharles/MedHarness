@@ -54,7 +54,7 @@ medharness --dhf DHF item update CR-004 --data '{"status": "develop"}'
 medharness --dhf DHF item create --type REL --data '{"title": "Baseline of change requests completed before closure records", "version": "baseline", "included_items": ["CR-003", "CR-005"], "release_notes": "Completed before the closure criteria existed; accepted as they are."}'
 ```
 
-CRs completed from then on carry the closure fields, and the next `build release` includes only them.
+CRs completed from then on carry the closure fields, and the next `build release` includes only them. `verify dhf` stops asking a completed CR for those fields once a REL lists it, so the baseline also keeps `verify dhf --strict`, which a release runs, from failing on the history.
 
 ## Test-driven development with test points
 

@@ -4,14 +4,16 @@ title: verify dhf reports a completed CR that lacks what its type requires of th
 risk: high
 content: '`verify dhf` shall report a change request whose status is completed while
   it lacks a field its type requires for the move to completed, as a warning and as
-  an error under `--strict`, and shall ask nothing of a CR that is not completed,
-  so that a CR with no record of what was planned, changed or assessed for risk, marked
-  completed by hand, is never read as closed.'
+  an error under `--strict`, and shall ask nothing of a CR that is not completed or
+  that a REL already lists, so that a CR with no record of what was planned, changed
+  or assessed for risk, marked completed by hand, is never read as closed, and a baselined
+  history is not failed again on every release.'
 verification_criteria: For each case under `--strict` the exit code is 1 and `errors`
   names the CR and the field; without it the same finding is a warning and the exit
   code is 0. The fields are the criteria on the CR type's transition into `completed`
   (by default `affected_items`, `implementation_notes` and `affected_risk_items`).
-testing: 'T1: A CR that is not completed is not asked for those fields.
+testing: 'T1: A CR that is not completed, or that a REL already lists, is not asked
+  for those fields.
 
   T2: A completed CR with no `affected_items` recorded is reported, naming it.
 
