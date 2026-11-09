@@ -11,6 +11,14 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.76.0] — 2026-11-09
+
+Two more fields that restated another, removed. Breaking.
+
+### Removed
+- `outcome` from the `build release` and `build approvals` reports. It was `errors` restated (`completed_with_errors` exactly when `errors` is not empty), and both commands already exit `1` on `errors`. `build soup` lost its `outcome` the same way in 0.73.0.
+- `matched_count` from the `build soup` report. Only the stderr summary read it, which now says how many packages were read. `manifests_parsed` and `packages_found` stay: with no dependency manifest found, `build soup` exits 0 and they are the only sign that it read nothing.
+
 ## [0.75.1] — 2026-11-09
 
 ### Fixed

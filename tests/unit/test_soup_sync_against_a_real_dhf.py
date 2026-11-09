@@ -59,7 +59,7 @@ class TestItRunsAtAll:
         _sync(project)
         again = _sync(project)
         assert again["items_created"] == []
-        assert again["matched_count"] == 2
+        assert again["packages_found"] == 2
 
     def test_a_drifted_version_is_reported(self, project: Path) -> None:
         _sync(project)

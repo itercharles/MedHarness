@@ -36,8 +36,8 @@ def _release(root: Path, *args: str, version: str = "1.0.0", results: Path | Non
 
 def _refused(root: Path, *needles: str, args: tuple[str, ...] = (), results: Path | None = None) -> dict:
     code, report, _ = _release(root, *args, results=results)
-    check(code == 1 and report["outcome"] == "completed_with_errors" and report["rel_uid"] is None,
-          f"exited {code}, outcome {report.get('outcome')}, rel_uid {report.get('rel_uid')}: {report.get('errors')}")
+    check(code == 1 and report["errors"] and report["rel_uid"] is None,
+          f"exited {code}, rel_uid {report.get('rel_uid')}: {report.get('errors')}")
     for needle in needles:
         check(any(needle in e for e in report["errors"]), f"no error says {needle!r}: {report['errors']}")
     return report
@@ -45,7 +45,7 @@ def _refused(root: Path, *needles: str, args: tuple[str, ...] = (), results: Pat
 
 def _released(root: Path, *args: str, version: str = "1.0.0") -> dict:
     code, report, _ = _release(root, *args, version=version)
-    check(code == 0 and report["outcome"] == "completed", f"exited {code}: {report.get('errors')}")
+    check(code == 0 and report["errors"] == [], f"exited {code}: {report.get('errors')}")
     return report
 
 

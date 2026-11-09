@@ -481,7 +481,6 @@ def _refused(version: str, cr_ids: list[str], errors: list[str],
              known_anomalies: list[dict] = ()) -> dict:
     """The baseline of a release that failed a gate before anything was written."""
     return {
-        "outcome": "completed_with_errors",
         "version": version,
         "cr_ids": sorted(cr_ids),
         "known_anomalies": list(known_anomalies),
@@ -609,7 +608,6 @@ def build_release_baseline(
         errors.append(f"Failed to write sbom.cdx.json: {exc}")
 
     return {
-        "outcome": "completed_with_errors" if errors else "completed",
         "version": version,
         "cr_ids": sorted(cr_ids),
         "known_anomalies": anomalies,
@@ -692,7 +690,6 @@ def build_release(
                 warnings.append(f"No release manifest: the '{store.store_type}' store keeps no item files to hash.")
 
     return {
-        "outcome": "completed_with_errors" if errors else "completed",
         "version": version,
         "cr_ids": baseline["cr_ids"],
         "rel_uid": rel_uid,

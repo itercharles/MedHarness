@@ -6,12 +6,12 @@ content: '`build approvals` shall, for a release `verify approval --release` pas
   and every signature that covers it (signer, record, key fingerprint, statement),
   the release''s DHF and approvers-list hashes and the approvers list it pins, so
   that who approved what can be read without the tooling.'
-verification_criteria: The exit code is 0, `outcome` is `completed`, `path` names
-  the sheet and `documents` and `signatures` count what it shows. The sheet holds
-  each manifest document's file and hashes, each signer's name, record ID and key
-  fingerprint, the statement, the DHF and approvers hashes, each approver's fingerprint
-  and roles; a document with no owning role says no signature is required; a signature
-  made without proven presence is marked.
+verification_criteria: The exit code is 0, `path` names the sheet and `documents`
+  and `signatures` count what it shows. The sheet holds each manifest document's file
+  and hashes, each signer's name, record ID and key fingerprint, the statement, the
+  DHF and approvers hashes, each approver's fingerprint and roles; a document with
+  no owning role says no signature is required; a signature made without proven presence
+  is marked.
 testing: 'T1: A signed release gets a sheet naming every document, signer, record
   and key, and the pinned hashes.
 

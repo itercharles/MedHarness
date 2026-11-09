@@ -57,7 +57,7 @@ def _junit(tmp_path: Path, links: str, failed: bool = False) -> Path:
 def test_a_cr_edited_to_completed_by_hand_blocks_the_release(tmp_path: Path) -> None:
     dhf = _project(tmp_path)
     result, report = _release(dhf, "--write")
-    assert result.exit_code == 1 and report.outcome == "completed_with_errors"
+    assert result.exit_code == 1 and report.errors
     assert any(e.startswith("CR-001:") for e in report.errors), report.errors
     assert report.rel_uid is None
     assert not list((dhf / "items").rglob("REL-002.yaml")), "a REL was recorded for a failed release"

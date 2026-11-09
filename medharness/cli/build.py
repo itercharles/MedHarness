@@ -345,7 +345,7 @@ def register(main):
         click.echo(
             f"{'FAIL' if result['errors'] else 'OK'} build soup: {len(result['items_created'])} created, "
             f"{len(result['to_update'])} updated, {len(result['orphans'])} orphan(s), "
-            f"{result['matched_count']} matched.", err=True,
+            f"{result['packages_found']} package(s) read.", err=True,
         )
         for err in result["errors"]:
             click.echo(f"  FAIL: {err}", err=True)

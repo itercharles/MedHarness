@@ -250,7 +250,6 @@ An item is its file's fields plus `type` (the item type's code), `file_path`, an
 | `packages_found` | integer | Packages across them |
 | `to_update` | list of `SoupDrift` | SOUP items whose version has drifted |
 | `orphans` | list of `SoupOrphan` | SOUP items no manifest resolves |
-| `matched_count` | integer | Packages that already have a matching SOUP item |
 | `items_created` | list of strings | SOUP items it wrote, in the working tree |
 | `errors` | list of strings | Manifests or commands that could not be read; any exits 1 |
 
@@ -274,25 +273,23 @@ An item is its file's fields plus `type` (the item type's code), `file_path`, an
 
 | Field | Type | Meaning |
 |---|---|---|
-| `outcome` | `completed` · `completed_with_errors` | `completed_with_errors` exits 1; a failing release still writes its evidence |
 | `version` | string | The version released |
 | `cr_ids` | list of strings | The completed CRs it includes |
 | `rel_uid` | string or null | The REL item recorded; null without `--write` or when a check failed |
 | `soup_count` | integer | SOUP items in the BOM |
 | `artifacts` | list of strings | Files written under `--out-dir`, relative to it |
-| `errors` | list of strings | What blocked the release |
+| `errors` | list of strings | What blocked the release; any exits 1, and a failing release still writes its evidence |
 | `warnings` | list of strings | What it noticed without blocking, such as a component with no purl |
 
 #### `build approvals`
 
 | Field | Type | Meaning |
 |---|---|---|
-| `outcome` | `completed` · `completed_with_errors` | `completed_with_errors` exits 1 and writes nothing |
 | `version` | string | The release the sheet is for |
 | `path` | string or null | The sheet written; null when the release is not fully signed |
 | `documents` | integer | Documents on the sheet, the release itself included |
 | `signatures` | integer | Signature records the sheet shows |
-| `errors` | list of strings | Why no sheet was written, as `verify approval --release` reports it |
+| `errors` | list of strings | Why no sheet was written, as `verify approval --release` reports it; any exits 1 |
 | `warnings` | list of strings | What `verify approval --release` noticed, such as a signature made without proven presence |
 
 #### `build validation`
