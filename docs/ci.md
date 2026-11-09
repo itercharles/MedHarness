@@ -136,7 +136,7 @@ medharness --dhf DHF build release --version 1.2.0 --out-dir release --junit tes
 Before writing anything to the DHF it checks that:
 
 - the DHF passes `verify dhf` — with coverage gaps failing, since a release is not the place for advisory findings;
-- every included CR is `completed` (by default, every completed CR not yet in a release; `--cr` to choose) **and still passes `verify completion`** — `completed` is a status anyone can write, so the gate is run again, with the `--junit` evidence;
+- every included CR is `completed` (by default, every completed CR not yet in a release; `--cr` to choose) **and still closes**: it meets the criteria of its move to `completed` and the items it changed have passing tests, as `verify dhf` and `verify tests --cr` ask. `completed` is a status anyone can write, so this is asked again, with the `--junit` evidence;
 - every open defect carries a `release_rationale` (IEC 62304 §9.7).
 
 Add `--write` to record the REL item. It is recorded **only when every check passed** — a failing release still writes its evidence, so you can read why, but leaves the DHF unchanged. The [CI recipe](#setting-up-ci) runs it on `v*` tags and brings the REL item back to `main` through a pull request.

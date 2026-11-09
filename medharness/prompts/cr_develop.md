@@ -41,10 +41,10 @@ this run to commit.
    ```bash
    <typecheck command>
    <test command>                        # produces JUnit XML
-   medharness --dhf {{dhf}} verify completion --cr {{cr_id}} --junit <junit-output-dir>
+   medharness --dhf {{dhf}} verify tests --cr {{cr_id}} --junit <junit-output-dir>
    ```
 
-   `verify completion` checks exactly this CR's items: each requirement it
+   `verify tests --cr` checks exactly this CR's items: each requirement it
    touched must be verified by a passing test. If it reports an item without a
    passing test, write that test or put `@links:<ITEM_ID>` in the name of the
    relevant test(s) and re-run tests + coverage until it passes:
@@ -78,7 +78,7 @@ this run to commit.
    '{"verification_method": ["Inspection"]}'`) and say why in
    `implementation_notes`. A comment in a test file is evidence of nothing:
    only a passing test that claims the ID, or a method that needs no test,
-   satisfies `verify completion`.
+   satisfies `verify tests --cr`.
 
 5. **Reconcile implementation against the plan and DHF items.**
 

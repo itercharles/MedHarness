@@ -58,10 +58,9 @@ A pipeline that only checks exit status needs to parse nothing. If you parse, ch
 <!-- BEGIN GENERATED: gates — python scripts/generate_interface.py -->
 | Gate | Checks | Network | Blocking |
 |---|---|---|---|
-| `verify dhf` | Schema validity, required traceability, dangling links, and coverage between V-model layers. | no | `conditional` |
-| `verify tests` | Requirement-to-test coverage from JUnit evidence, including declared test points. | no | `conditional` |
+| `verify dhf` | Schema validity, required traceability, dangling links, coverage between V-model layers, and that a completed CR has what its type requires of one. | no | `conditional` |
+| `verify tests` | Requirement-to-test coverage from JUnit evidence, including declared test points; with --cr, only for the items one CR changed. | no | `conditional` |
 | `verify soup` | The SOUP register against the dependency manifests, and each item against the OSV vulnerability database, honouring documented per-CVE acceptances. | yes | `conditional` |
-| `verify completion` | CR closure: mandatory CR fields, that the CR's affected_items exist, and verification evidence for each. | no | `always` |
 | `verify impact` | That the CR's record of its impact (impact_analysis, reviewed_items, affected_risk_items) is complete, evidenced and settles every item the branch's changes reach, and that the branch changes exactly the items the CR lists. | no | `always` |
 | `verify approval` | That every approval is signed by an approver holding its roles, that approvals are only added, and that a change to the approvers list is approved from the list as it was. With --release: that each document of the release manifest and the release itself carry a current signature from their role. | no | `always` |
 <!-- END GENERATED: gates -->

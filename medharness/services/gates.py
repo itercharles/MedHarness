@@ -25,22 +25,25 @@ BLOCKING = ("always", "conditional")
 GATES: tuple[dict[str, Any], ...] = (
     {
         "command": "verify dhf",
-        "checks": "Schema validity, required traceability, dangling links, and "
-                  "coverage between V-model layers.",
+        "checks": "Schema validity, required traceability, dangling links, "
+                  "coverage between V-model layers, and that a completed CR has "
+                  "what its type requires of one.",
         "blocking": "conditional",
         "blocking_note": "Schema errors, required-link failures, broken links "
                          "(dangling, wrong type, cycles) and a status no state of "
-                         "its type always fail. Coverage gaps and placeholder text "
-                         "warn unless --strict is passed.",
+                         "its type always fail. Coverage gaps, placeholder text and a "
+                         "completed CR missing what completing asks warn unless "
+                         "--strict is passed.",
         "needs_network": False,
     },
     {
         "command": "verify tests",
         "checks": "Requirement-to-test coverage from JUnit evidence, including "
-                  "declared test points.",
+                  "declared test points; with --cr, only for the items one CR changed.",
         "blocking": "conditional",
         "blocking_note": "Uncovered requirements and unverified tests always fail. "
-                         "A missing verification_method warns unless --strict.",
+                         "A missing verification_method warns unless --strict, "
+                         "and always fails under --cr.",
         "needs_network": False,
     },
     {
@@ -53,14 +56,6 @@ GATES: tuple[dict[str, Any], ...] = (
                          "osv.dev unless --offline-mode warn. Drift from the manifests "
                          "warns unless --strict.",
         "needs_network": True,
-    },
-    {
-        "command": "verify completion",
-        "checks": "CR closure: mandatory CR fields, that the CR's affected_items "
-                  "exist, and verification evidence for each.",
-        "blocking": "always",
-        "blocking_note": "",
-        "needs_network": False,
     },
     {
         "command": "verify impact",

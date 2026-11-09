@@ -35,7 +35,6 @@ SIMPLE_GATES = (
 #: Arguments each CLI gate needs to reach its reporting path.
 GATE_ARGS = {
     "verify tests": ["--junit", "{dhf}"],
-    "verify completion": ["--cr", "CR-001"],
     "verify impact": ["--cr", "CR-001"],
 }
 
@@ -155,7 +154,6 @@ class TestNoGateEscapesTheEnvelope:
         # Arguments each gate needs to reach its reporting path.
         extra = {
             "verify tests": ["--junit", str(dhf)],
-            "verify completion": ["--cr", "CR-001"],
             "verify impact": ["--cr", "CR-001"],
         }
         offenders = []
@@ -174,11 +172,10 @@ class TestNoGateEscapesTheEnvelope:
                 offenders.append((gate["command"], sorted(set(payload) ^ set(ENVELOPE_KEYS))))
         assert not offenders, f"gates not emitting the envelope: {offenders}"
 
-    def test_cr_closure_gate_uses_the_envelope(self, dhf: Path) -> None:
-        from medharness.services.verify_completion import cr_closure_gate
+    def test_the_scoped_coverage_gate_uses_the_envelope(self, dhf: Path) -> None:
+        from medharness.services.verify_tests import ci_test_coverage_gate
 
-        result = cr_closure_gate(dhf_path=dhf, cr_id="CR-001", junit_paths=[])
-        assert set(result) == set(GATE_RESULT_KEYS)
+        assert set(ci_test_coverage_gate(dhf, [], cr_id="CR-001")) == set(GATE_RESULT_KEYS)
 
     def test_test_coverage_gate_uses_the_envelope(self, dhf: Path) -> None:
         from medharness.services.verify_tests import ci_test_coverage_gate
@@ -279,7 +276,7 @@ class TestFailurePathsHonourTheContract:
     """
 
     FAILING = ("verify dhf", "verify tests",
-               "verify completion", "verify impact")
+               "verify impact")
 
     @pytest.mark.parametrize("command", FAILING)
     def test_no_crash_on_the_failure_path(self, command: str, failing_dhf: Path) -> None:
@@ -368,7 +365,7 @@ class TestStderrCarriesTheEnvelope:
     """
 
     ALL = ("verify dhf", "verify tests",
-           "verify completion", "verify impact")
+           "verify impact")
 
     @pytest.mark.parametrize("command", ALL)
     def test_stderr_reports_the_envelope(self, command: str, failing_dhf: Path) -> None:

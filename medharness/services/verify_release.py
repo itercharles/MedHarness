@@ -15,6 +15,10 @@ from dhfkit.store import open_store
 RELEASABLE_STATE = "completed"
 
 
+def unmet_criterion_message(item_id: str, criterion: dict) -> str:
+    return f"{item_id} — {criterion['name']}: `{criterion['field']}` is not recorded."
+
+
 # A defect in any other state, no state included, still affects the software being
 # released. 'cancelled' means the report was withdrawn, not that the software changed.
 _RESOLVED_DEFECT_STATES = ("resolved", "closed", "cancelled")
@@ -81,17 +85,20 @@ def unreleasable_crs(dhf: Path, cr_ids: list[str]) -> list[dict]:
 
 
 def still_closed(dhf: Path, cr_ids: list[str], junit_paths: list[Path]) -> tuple[list[str], list[str]]:
-    """``(errors, warnings)`` of running `verify completion` again on each CR to be released.
+    """``(errors, warnings)`` of asking again, of each CR to be released, what closing it asked.
 
-    `completed` is a status anyone can write. A CR ships only if it still passes
-    the same closure gate `verify completion` runs.
+    `completed` is a status anyone can write. A CR ships only if it still meets the criteria of
+    the move to `completed` and what it changed still has passing tests.
     """
-    from medharness.services.verify_completion import cr_closure_gate
+    from medharness.services.verify_tests import ci_test_coverage_gate
 
+    adapter = open_store(dhf)
     errors: list[str] = []
     warnings: list[str] = []
     for cr_id in cr_ids:
-        closure = cr_closure_gate(cr_id, dhf, junit_paths=junit_paths)
-        errors += [f"{cr_id}: {e}" for e in closure["errors"]]
-        warnings += [f"{cr_id}: {w}" for w in closure["warnings"]]
+        errors += [f"{cr_id}: {unmet_criterion_message(cr_id, c)}"
+                   for c in adapter.unmet_criteria(cr_id, RELEASABLE_STATE)]
+        tests = ci_test_coverage_gate(dhf, junit_paths, cr_id=cr_id)
+        errors += [f"{cr_id}: {e}" for e in tests["errors"]]
+        warnings += [f"{cr_id}: {w}" for w in tests["warnings"]]
     return errors, warnings

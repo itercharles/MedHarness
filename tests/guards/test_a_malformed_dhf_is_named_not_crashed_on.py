@@ -34,7 +34,7 @@ COMMANDS = [
     "verify dhf",
     "verify tests --junit {dhf}",
     "verify soup --offline-mode warn",
-    "verify completion --cr CR-001",
+    "verify tests --cr CR-001",
     "verify impact --cr CR-001",
 ]
 

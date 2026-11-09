@@ -88,7 +88,7 @@ Every command and gate, against the promises (● serves it, ○ serves it indir
 | `verify dhf` | ● | | | Keep |
 | `verify changes` (folded into `verify impact` in 0.74.0) | ● | | ○ | Keep |
 | `verify tests` | ● | ● | | Keep |
-| `verify completion` | ● | ● | | Keep |
+| `verify completion` (split in 0.75.0 into `verify tests --cr` and a rule of `verify dhf`) | ● | ● | | Keep |
 | `build release` | | ● | | Keep |
 | `build soup`, and `verify soup` drift | ● | ● | | Keep |
 | `verify impact` | | | ● | Keep: where iteration 2 invests |
@@ -145,7 +145,7 @@ tagged with their gap, so the test summary is the catch rate.
 | Verifying test weakened | Missed: G4 |
 
 A change request that changes dose calculation and names no item passes every gate,
-`verify completion` included.
+`verify tests --cr` included.
 
 The baseline found one more gap:
 
@@ -214,7 +214,7 @@ against what MedHarness has:
 | Element | Today | Verdict |
 |---|---|---|
 | Intended use | The charter, the README and ai-security.md: the AI stages propose; the deterministic commands are the ones to rely on | Present |
-| Risk of the tool failing | None. A gate that wrongly passes (`verify completion`, `verify approval --release`, `build release`) matters far more than `item list` going wrong, and nothing says so | Missing |
+| Risk of the tool failing | None. A gate that wrongly passes (`verify tests --cr`, `verify approval --release`, `build release`) matters far more than `item list` going wrong, and nothing says so | Missing |
 | Requirements | `interface.md` is a tested contract of commands, options and answers, but it says what a gate prints, not what it must stop | Partial |
 | Verification | About 2,100 tests (unit, integration, interface, guards) and the seeded-omission fixture, but none traces to a requirement, and coverage is not measured | Partial |
 | Configuration | Semantic versions, the changelog, `uv.lock` and the release preflight. The published package does not pin its dependencies, so an install can differ from what was tested | Gap |

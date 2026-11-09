@@ -24,7 +24,7 @@ from medharness.scaffold import replace_placeholders, scaffold_dhf
 COMMANDS = [
     ("medharness", ["verify", "dhf"]),
     ("medharness", ["verify", "tests", "--junit", "{dhf}"]),
-    ("medharness", ["verify", "completion", "--cr", "CR-001"]),
+    ("medharness", ["verify", "tests", "--cr", "CR-001"]),
     ("medharness", ["verify", "soup", "--offline-mode", "warn"]),
     ("medharness", ["item", "list"]),
     ("medharness", ["build", "soup"]),

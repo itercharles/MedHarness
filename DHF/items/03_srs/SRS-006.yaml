@@ -1,16 +1,14 @@
 id: SRS-006
-title: verify completion passes a complete, verified CR and blames it for nothing
-  else
+title: verify tests --cr passes a verified CR and blames it for nothing else
 risk: high
-content: '`verify completion` shall pass a change request whose record is complete,
-  whose affected items exist and are verified, and shall hold it to the items it lists
-  and to nothing else, so that a sound closure is not blocked and an unrelated gap
-  is not charged to it.'
+content: '`verify tests --cr` shall pass when every item the CR lists is verified
+  by the method it declares, and shall hold it to the items it lists and to nothing
+  else, so that a sound closure is not blocked and an unrelated gap is not charged
+  to it.'
 verification_criteria: The exit code is 0 and `passed` is true when every affected
-  item is present and verified; an item the CR does not list, or of a type that needs
-  no test, adds no error.
-testing: 'T1: Affected items that are present, declare Test, and have a passing linked
-  test: passes.
+  item is verified; an item the CR does not list, or of a type that needs no test,
+  adds no error.
+testing: 'T1: Affected items that declare Test and have a passing linked test: passes.
 
   T2: A CR that records `affected_items: []` passes.
 

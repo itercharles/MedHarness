@@ -48,7 +48,7 @@ def test_a_single_id_that_does_not_exist_is_one_dangling_link(tmp_path: Path) ->
 
 
 def test_every_command_reads_a_single_id_as_one_link(tmp_path: Path) -> None:
-    """0.58.20 fixed the dangling-link check alone; `verify completion` still read
+    """0.58.20 fixed the dangling-link check alone; the closure check still read
     `affected_items: SRS-001` as seven missing items, "S", "R", "S", "-", ..."""
     scaffold_dhf(tmp_path)
     replace_placeholders(tmp_path, "One")
@@ -58,8 +58,9 @@ def test_every_command_reads_a_single_id_as_one_link(tmp_path: Path) -> None:
     data["affected_items"] = "SRS-001"
     path.write_text(yaml.safe_dump(data), encoding="utf-8")
 
-    result = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", "completion", "--cr", "CR-001"])
+    result = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", "tests", "--cr", "CR-001"])
     errors = json.loads(result.stdout.splitlines()[0])["errors"]
-    assert not [e for e in errors if "absent from the DHF" in e], errors
+    assert any(e.startswith("SRS-001:") for e in errors), errors
+    assert not [e for e in errors if e.startswith(("S:", "R:", "-:", "0:", "1:"))], errors
     got = json.loads(CliRunner().invoke(main, ["--dhf", str(dhf), "item", "get", "CR-001"]).stdout)
     assert got["affected_items"] == ["SRS-001"]

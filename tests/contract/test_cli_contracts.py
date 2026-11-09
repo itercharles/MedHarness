@@ -112,7 +112,7 @@ class TestCRGenerationCommands:
     def test_commands_appear_in_help_groups(self):
         """Each verb lists its own commands, so `--help` finds them all."""
         expected = {
-            "verify": ["dhf", "tests", "soup", "completion", "impact"],
+            "verify": ["dhf", "tests", "soup", "impact"],
             "build": ["plan", "code", "soup", "release"],
         }
         for verb, commands in expected.items():
@@ -168,8 +168,8 @@ class TestOutputContract:
             assert "type" in item
 
 
-    def test_verify_completion_output_shape(self, scaffolded_dhf, tmp_path):
-        """verify completion writes JSON with all required keys to stdout."""
+    def test_verify_tests_for_a_cr_output_shape(self, scaffolded_dhf, tmp_path):
+        """verify tests --cr writes JSON with all required keys to stdout."""
         import json
         dhf = scaffolded_dhf / "DHF"
         # Write a minimal CR with all mandatory closure fields
@@ -188,7 +188,7 @@ class TestOutputContract:
         (review_dir / "CR-CONTRACT-Design-Review.md").write_text(
             "# Design Review: CR-CONTRACT\n\n**Verdict:** Approved\n"
         )
-        r = _run("medharness", "--dhf", str(dhf), "verify", "completion", "--cr", "CR-CONTRACT")
+        r = _run("medharness", "--dhf", str(dhf), "verify", "tests", "--cr", "CR-CONTRACT")
         payload = json.loads(r.stdout.splitlines()[0])
         assert payload.keys() == ENVELOPE, (
             f"stdout is the envelope and nothing else; got {sorted(payload)}"

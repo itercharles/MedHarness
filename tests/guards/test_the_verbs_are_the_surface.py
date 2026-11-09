@@ -28,7 +28,7 @@ RETIRED_GROUPS = ("change", "automation", "soup-sync", "upgrade", "context", "do
 
 #: old invocation -> what replaced it.
 RENAMED = {
-    "change verify-completion": "verify completion",
+    "change verify-completion": "verify tests --cr",
     "change verify-branch": "verify impact",
     "change verify-approval": "GitHub branch protection",
     "change plan": "build plan",
@@ -162,4 +162,4 @@ def test_no_message_or_prompt_names_a_retired_command(path: Path) -> None:
 
 def test_the_source_scan_read_something() -> None:
     assert any(p.name == "cr_generate_dhf.md" for p in SOURCES)
-    assert any(p.name == "verify_completion.py" for p in SOURCES)
+    assert any(p.name == "verify_tests.py" for p in SOURCES)

@@ -1,16 +1,17 @@
 id: SRS-003
-title: verify completion refuses an affected item that is absent from the DHF
+title: verify dhf and verify tests refuse a closure that rests on an item or a CR
+  the DHF does not have
 risk: high
-content: '`verify completion` shall fail a change request whose `affected_items` lists
-  an ID that is not an item of the DHF, so that a closure cannot rest on an item that
-  does not exist.'
-verification_criteria: The exit code is 1, `passed` is false, `missing_items` holds
-  the absent ID and `errors` says it is in `affected_items` but absent from the DHF.
-testing: 'T1: A CR lists an ID the DHF does not hold: fails, and the ID is in `missing_items`
-  and `errors`.
+content: '`verify dhf` shall fail a change request whose `affected_items` lists an
+  ID that is not an item of the DHF, and `verify tests --cr` shall fail a CR that
+  is not in the DHF, so that a closure cannot rest on something that does not exist.'
+verification_criteria: For the absent item the exit code of `verify dhf` is 1 and
+  `errors` names the absent ID as a target that does not exist; for the absent CR
+  the exit code of `verify tests --cr` is 1 and `errors` names `cr_item`.
+testing: 'T1: A CR lists an ID the DHF does not hold: `verify dhf` fails and names
+  the ID.
 
-  T2: On the command line the exit code is non-zero and the output names the missing
-  ID.'
+  T2: `verify tests --cr` for a CR the DHF does not hold fails, naming `cr_item`.'
 verification_method:
 - Test
 type: SRS

@@ -1,4 +1,4 @@
-"""`verify tests`, `verify completion` and the release report agree on what a test verifies.
+"""`verify tests`, `verify tests --cr` and the release report agree on what a test verifies.
 
 Three things read JUnit three ways. A requirement verified by Inspection failed
 `verify tests` for having no test, so the only way through was a fake link; a test tagged
@@ -93,7 +93,7 @@ def test_one_failing_test_outweighs_a_passing_one(dhf: Path, tmp_path: Path) -> 
     assert any("SRS-001" in e for e in answer["errors"]), answer["errors"]
 
     _set(dhf, "CR-001.yaml", affected_items=["SRS-001"])
-    completion = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", "completion", "--cr", "CR-001",
+    completion = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", "tests", "--cr", "CR-001",
                                            "--junit", str(junit)])
     assert any("SRS-001" in e for e in json.loads(completion.stdout.splitlines()[0])["errors"])
 
@@ -114,7 +114,7 @@ def test_the_closure_gate_reads_name_tags_too(dhf: Path, tmp_path: Path) -> None
                  "affected_items": ["SYS-001"]})
     cr.write_text(yaml.safe_dump(data))
     junit = _junit(tmp_path, ("test_it @links:SYS-001", None, False))
-    result = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", "completion", "--cr", "CR-001", "--junit", str(junit)])
+    result = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", "tests", "--cr", "CR-001", "--junit", str(junit)])
     assert result.exit_code == 0, result.stdout
 
 

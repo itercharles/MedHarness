@@ -25,7 +25,7 @@ def test_a_file_and_a_directory_are_both_read_once(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize("command", [
     ["verify", "tests"],
-    ["verify", "completion", "--cr", "CR-001"],
+    ["verify", "tests", "--cr", "CR-001"],
     ["build", "release", "--version", "1.0.0", "--out-dir", "out"],
 ])
 def test_a_path_that_does_not_exist_is_a_usage_error(command: list[str], tmp_path: Path) -> None:

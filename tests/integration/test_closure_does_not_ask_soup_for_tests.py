@@ -1,6 +1,6 @@
 """A CR that changed a SOUP item is not asked for test evidence.
 
-`verify completion` chose the types to check by "declares a `verification_method`", which
+`verify tests --cr` chose the types to check by "declares a `verification_method`", which
 includes SOUP (a third-party software record), while `verify tests` and `build plan` check
 requirements. A CR whose `build soup` updated a dependency failed to close with
 "SOUP-001: no verification_method declared".
@@ -27,7 +27,7 @@ def _closure(tmp_path: Path, affected: list[str]):
     data = yaml.safe_load(path.read_text())
     data.update(affected_items=affected, implementation_notes="Done.", affected_risk_items=[])
     path.write_text(yaml.safe_dump(data))
-    result = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", "completion", "--cr", "CR-001"])
+    result = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", "tests", "--cr", "CR-001"])
     return result, json.loads(result.stdout.splitlines()[0])
 
 

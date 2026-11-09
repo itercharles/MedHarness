@@ -1,7 +1,7 @@
 """`build release` ships only what the gates still pass.
 
 `completed` is a status anyone can write. A CR edited to it by hand shipped in a
-release that `verify completion --cr` failed with four errors, and the release's
+release that `verify dhf` and `verify tests --cr` failed it with four errors, and the release's
 traceability report followed only the first configured matrix, so the chain from
 risk to control was missing from its own evidence.
 """
