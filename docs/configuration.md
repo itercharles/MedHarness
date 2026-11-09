@@ -98,6 +98,8 @@ defaults again, delete the copies you have not changed.
 
 ## What `verify impact` reads
 
+- The CR's `affected_items`: the branch's DHF changes must be exactly that list, apart from the CR itself.
+  `--code-path PATH` also requires a change to some file under PATH; without it code is not looked at.
 - `impact_depth` in `global.yaml` is how many typed links out from a changed item it looks for an item
   that depends on it and was neither changed nor listed in the CR's `reviewed_items`. `0` turns that off.
   Only item types that sit in a traceability chain count.

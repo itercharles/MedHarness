@@ -95,7 +95,7 @@ Run both on the branch to block the merge, and `verify tests --cr` again on `mai
 
 `verify tests --cr` judges the items this CR touched only, as under `--strict`, so the CR is not charged the DHF's other gaps. Every item in `affected_items` that is a requirement (CRS, SYS, SRS) must have `verification_method` set, and those with `Test` need passing JUnit evidence; the declared test points must each be covered. A CR that is not in the DHF fails.
 
-`verify dhf` checks the rest: every item in `affected_items` exists, and a CR whose status is `completed` carries what its type requires of the move to `completed`, the criteria on that transition in `cr.yaml` (by default the four marked ✓ above), which `item transition CR-NNN completed` refuses on too. It is a warning, and an error under `--strict`; a project that changes the criteria there changes this check. A CR planned by hand records the fields with `medharness item update`.
+`verify dhf` checks the rest: every item in `affected_items` exists, and a CR whose status is `completed` and that no REL lists yet carries what its type requires of the move to `completed`, the criteria on that transition in `cr.yaml` (by default the four marked ✓ above), which `item transition CR-NNN completed` refuses on too. It is a warning, and an error under `--strict`; a project that changes the criteria there changes this check. A CR planned by hand records the fields with `medharness item update`.
 
 Approval is not their question. During development it is the review of the pull request, under your team's rules, and no check reads it; at release the documents are signed and [`verify approval --release`](ci.md#signing-a-release) checks that.
 

@@ -107,7 +107,7 @@ def ci_structural_gate(
                     })
         results["placeholders"] = _placeholders(adapter)
         results["invalid_statuses"] = _invalid_statuses(adapter)
-        results["completed_but_unmet"] = _completed_but_unmet(adapter)
+        results["completed_but_unmet"] = _completed_but_unmet(adapter, dhf_path)
     except Exception as exc:  # noqa: BLE001
         # Say so. Swallowing this reported "no verification_criteria gaps"
         # on a DHF whose items could not be read — a pass indistinguishable
@@ -139,16 +139,19 @@ def _invalid_statuses(adapter) -> list[dict]:
     return found
 
 
-def _completed_but_unmet(adapter) -> list[dict]:
-    """Items whose status is `completed` while the criteria of the move into it are not met: a hand-edited status."""
+def _completed_but_unmet(adapter, dhf_path: Path) -> list[dict]:
+    """Completed CRs that no REL lists yet, while the criteria of the move into `completed` are not met.
+
+    One a REL lists is released or baselined, and its record is not asked for again.
+    """
+    from medharness.services.release import _auto_collect_crs
     from medharness.services.verify_release import RELEASABLE_STATE
 
     found = []
-    for item in adapter.list_items():
-        if item.get("status") == RELEASABLE_STATE:
-            unmet = adapter.unmet_criteria(item["id"], RELEASABLE_STATE)
-            if unmet:
-                found.append({"id": item["id"], "unmet": unmet})
+    for cr_id in _auto_collect_crs(dhf_path):
+        unmet = adapter.unmet_criteria(cr_id, RELEASABLE_STATE)
+        if unmet:
+            found.append({"id": cr_id, "unmet": unmet})
     return found
 
 
