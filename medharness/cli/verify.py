@@ -58,8 +58,9 @@ def register(main):
                   help="Make a requirement with no declared verification_method fail. "
                        "Warns by default, so a project adding the field is not blocked.")
     @click.option("--cr", "cr_id", default=None, metavar="CR_ID",
-                  help="Judge only the items in this CR's affected_items, as under --strict: the "
-                       "check before closing it, which a CR is not charged the DHF's other gaps in.")
+                  help="The check before closing this CR: judge only the items in its affected_items, as "
+                       "under --strict, and require the CR to carry what its type requires of the move "
+                       "to completed, whatever state it is in.")
     @click.pass_context
     def verify_tests(ctx: click.Context,
                          junit_paths: tuple[Path, ...],
@@ -71,7 +72,9 @@ def register(main):
         declared test points each need a covering case.
 
         With --cr, only the requirements the CR changed are judged, so a CR can be closed on
-        what it did. A requirement with no declared method fails there.
+        what it did. A requirement with no declared method fails there, and so does a CR that lacks
+        a field its type requires of the move to completed: run it before the merge, while the CR
+        is still in develop.
         """
         effective_dhf = ctx.obj["dhf"]
         result = ci_test_coverage_gate(dhf_path=effective_dhf,

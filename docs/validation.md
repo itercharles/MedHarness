@@ -76,12 +76,12 @@ The requirements were derived from what the commands do today ([interface](inter
 
 The suite above is the vendor's verification: it runs in this repository, with `pytest` and a checkout. `medharness build validation` is what a user runs where MedHarness is installed ([ADR-005](adr/ADR-005-installation-validation.md), [adopting](adopting.md#validating-your-installation)). It runs the validation set in `medharness/validation/`, which ships in the wheel: each case runs the CLI against a scratch project in a temporary directory and checks test points of a high-risk requirement. A case checks with `check()`, never `assert`, which `python -O` would remove. The set covers the gates, not `build validation` itself, which cannot be validated by the set it runs; the suite verifies it (SRS-071 to SRS-074).
 
-The set exercises every test point of the high-risk requirements, 175 points, each through the CLI:
+The set exercises every test point of the high-risk requirements, 176 points, each through the CLI:
 
 | Module | What it covers | Points |
 |---|---|---|
 | `medharness/validation/seeded.py` | The seeded-omission project: the honest change passes every gate, and each omission is stopped by the gate whose job it is | SRS-007 T4, SRS-008 T2, SRS-009 T2, SRS-010 T4, SRS-011 T3, SRS-012 T3, SRS-030 T4, SRS-031 T2, SRS-034 T3 |
-| `medharness/validation/completion.py` | `verify dhf` on a completed CR and `verify tests --cr`, every point | SRS-002 to SRS-006 (22) |
+| `medharness/validation/completion.py` | `verify dhf` on a completed CR and `verify tests --cr`, every point | SRS-002 to SRS-006 (23) |
 | `medharness/validation/impact.py` | `verify impact`, every point the seeded project does not cover | SRS-007 to SRS-015 (22) |
 | `medharness/validation/approval.py` | `verify approval`, every point, with throwaway SSH keys (`medharness/validation/signing.py`); needs `ssh-keygen` | SRS-016 to SRS-023 (31) |
 | `medharness/validation/verification.py` | `verify tests`, every point | SRS-024 to SRS-029 (20) |

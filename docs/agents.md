@@ -36,7 +36,7 @@ wrong, so an agent, a script and a hook all use them the same way. `--dhf PATH` 
 | After designing it | `medharness verify impact --cr CR-NNN` | The CR's record of its impact is incomplete or unevidenced, leaves an item the change reaches unsettled, or does not match what the branch changed |
 | Building it | `medharness build code --cr CR-NNN --prompt` | The CR has no `implementation_notes` to implement |
 | After the code | `medharness verify impact --cr CR-NNN --code-path src/` | As above, or no file under `src/` changed |
-| Before closing | `medharness verify tests --cr CR-NNN --junit test-results` | An item the CR changed has no passing test, or no declared verification method |
+| Before closing | `medharness verify tests --cr CR-NNN --junit test-results` | An item the CR changed has no passing test or no declared verification method, or the CR lacks a field closing it requires |
 
 `item create|update --data` takes the JSON inline, from a file (`--data @fields.json`) or from standard input
 (`--data -`); use a file for anything long, such as a CR's `impact_analysis`.

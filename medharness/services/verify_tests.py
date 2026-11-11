@@ -31,11 +31,13 @@ def ci_test_coverage_gate(
 
     With ``cr_id`` only the items in that CR's ``affected_items`` are judged, and as under
     ``strict``: charging one CR with every requirement the DHF never verified would make the
-    check unusable on a project that has any.
+    check unusable on a project that has any. The CR must also carry what its type requires of the
+    move to `completed`, whatever state it is in, so the check can run before the merge.
     """
     from dhfkit.store import open_store
 
     scope: set[str] | None = None
+    closing: list[str] = []
     if cr_id is not None:
         cr_item = open_store(dhf_path).get_item(cr_id)
         if cr_item is None:
@@ -46,6 +48,10 @@ def ci_test_coverage_gate(
             )
         scope = {uid for uid in cr_item.get("affected_items") or [] if isinstance(uid, str)}
         strict = True
+        from medharness.services.verify_release import RELEASABLE_STATE
+
+        closing = [f"the CR lacks `{c['field']}` ({c['name']})"
+                   for c in open_store(dhf_path).unmet_criteria(cr_id, RELEASABLE_STATE)]
 
     if not junit_paths and (scope is None or _scope_needs_evidence(dhf_path, scope)):
         # Declaring a verification method needs no test run, so returning here
@@ -61,7 +67,7 @@ def ci_test_coverage_gate(
         return gate_result(
             "verify tests", False,
             "No JUnit evidence given — test results were not checked.",
-            errors=["No JUnit files found — pass --junit."] + (
+            errors=closing + ["No JUnit files found — pass --junit."] + (
                 [f"{g['id']}: no verification_method declared" for g in missing] if strict else []
             ),
             warnings=(
@@ -127,7 +133,7 @@ def ci_test_coverage_gate(
             "uncovered": uncovered,
         })
 
-    errors = [
+    errors = closing + [
         f"{row['type']}: {row['covered']}/{row['total']} requirements covered"
         for row in results if not row.get("passed")
     ] + [
