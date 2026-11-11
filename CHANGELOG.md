@@ -11,6 +11,13 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.77.0] — 2026-11-12
+
+### Changed
+- `verify tests --cr CR-NNN` also fails a CR that lacks what its type requires of the move to `completed` (by default `affected_items`, `implementation_notes` and `affected_risk_items`), whatever state the CR is in. Splitting `verify completion` in 0.75.0 left that check to `verify dhf`, which reads only CRs already `completed`, so a CR still in `develop` could be merged without its record and was refused only afterwards, at `item transition CR-NNN completed`. A project that ran `verify completion` on the branch before the merge gets the same check back by running `verify tests --cr`.
+- `build release` takes that check from `verify tests --cr` too, so a hand-written `completed` still cannot ship; its errors read `CR-NNN: the CR lacks `field` (criterion)`.
+- SRS-002 gains T7, so `build validation` runs 176 test points.
+
 ## [0.76.0] — 2026-11-09
 
 Two more fields that restated another, removed. Breaking.

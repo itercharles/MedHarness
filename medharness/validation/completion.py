@@ -140,6 +140,13 @@ def every_incomplete_field_on_the_command_line(root: Path) -> None:
         check("WARN" in stderr and field in stderr, f"stderr does not report {field}: {stderr!r}")
 
 
+def cr_in_develop_lacks_the_record(root: Path) -> None:
+    edit(root, "CR-001", status="develop")
+    _without(root, "CR-001", "implementation_notes")
+    answer = _refused(root, "`implementation_notes`", junit_paths=(root / "results" / "junit.xml",))
+    check(not any("`affected_items`" in e for e in answer["errors"]), f"a recorded field is named: {answer['errors']}")
+
+
 # --- SRS-003: an affected item or a CR the DHF does not have -------------------------------------
 
 def affected_item_absent(root: Path) -> None:
@@ -262,6 +269,8 @@ CASES = [
          closure_asks_what_the_cr_type_asks, tools=()),
     Case("every_incomplete_field_on_the_command_line", "SRS-002", ("T6",), verified_starter,
          every_incomplete_field_on_the_command_line, tools=()),
+    Case("cr_in_develop_lacks_the_record", "SRS-002", ("T7",), verified_starter,
+         cr_in_develop_lacks_the_record, tools=()),
     Case("affected_item_absent", "SRS-003", ("T1",), verified_starter, affected_item_absent, tools=()),
     Case("cr_not_in_the_dhf", "SRS-003", ("T2",), verified_starter, cr_not_in_the_dhf, tools=()),
     Case("requirement_without_a_method", "SRS-004", ("T1",), verified_starter, requirement_without_a_method, tools=()),

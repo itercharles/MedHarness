@@ -10,7 +10,7 @@ content: '`build validation` shall run every case in a temporary directory, neve
 verification_criteria: From a wheel built with a release record and installed outside
   the source tree, the report shows the installation verifiable with no altered file,
   names the record's version and commit, every dependency of an identical configuration
-  is `equal`, it lists all 175 high-risk test points, and every point a case exercises
+  is `equal`, it lists all 176 high-risk test points, and every point a case exercises
   passed. A dependency at another version is `different` and one not installed is
   `missing`, and neither fails the validation. The DHF named by `--dhf` is not read
   or created, the report file contains the requirement text, and stdout is one JSON

@@ -1,17 +1,21 @@
 id: SRS-002
-title: verify dhf reports a completed CR that lacks what its type requires of the
-  move to completed
+title: verify dhf and verify tests --cr report a CR that lacks what its type requires
+  of the move to completed
 risk: high
 content: '`verify dhf` shall report a change request whose status is completed while
   it lacks a field its type requires for the move to completed, as a warning and as
   an error under `--strict`, and shall ask nothing of a CR that is not completed or
   that a REL already lists, so that a CR with no record of what was planned, changed
   or assessed for risk, marked completed by hand, is never read as closed, and a baselined
-  history is not failed again on every release.'
-verification_criteria: For each case under `--strict` the exit code is 1 and `errors`
-  names the CR and the field; without it the same finding is a warning and the exit
-  code is 0. The fields are the criteria on the CR type's transition into `completed`
-  (by default `affected_items`, `implementation_notes` and `affected_risk_items`).
+  history is not failed again on every release. `verify tests --cr` shall fail a CR
+  that lacks those fields in whatever state it is, so that the check runs before the
+  merge, while the CR is still in develop.'
+verification_criteria: For each case under `--strict` the exit code of `verify dhf`
+  is 1 and `errors` names the CR and the field; without it the same finding is a warning
+  and the exit code is 0. For `verify tests --cr` the exit code is 1 and `errors`
+  names each missing field of the CR. The fields are the criteria on the CR type's
+  transition into `completed` (by default `affected_items`, `implementation_notes`
+  and `affected_risk_items`).
 testing: 'T1: A CR that is not completed, or that a REL already lists, is not asked
   for those fields.
 
@@ -27,7 +31,10 @@ testing: 'T1: A CR that is not completed, or that a REL already lists, is not as
   and a project that requires nothing is asked for nothing.
 
   T6: On the command line each incomplete field is reported, the exit code is 0 without
-  `--strict` and non-zero with it.'
+  `--strict` and non-zero with it.
+
+  T7: `verify tests --cr` for a CR still in develop that lacks a field fails, naming
+  it.'
 verification_method:
 - Test
 type: SRS
