@@ -253,8 +253,7 @@ def register(main):
         rel_note = f", recorded as {result['rel_uid']}" if result["rel_uid"] else " (dry run)"
         click.echo(
             f"OK build release {version}{rel_note}: {len(result['cr_ids'])} CR(s), "
-            f"{result['soup_count']} SOUP item(s), {len(result['artifacts'])} file(s) "
-            f"in {out_dir}.",
+            f"{len(result['artifacts'])} file(s) in {out_dir}.",
             err=True,
         )
 
@@ -290,8 +289,7 @@ def register(main):
         if result["errors"]:
             click.echo(f"No approval sheet written for release {version}.", err=True)
             sys.exit(1)
-        click.echo(f"OK build approvals {version}: {result['documents']} document(s), "
-                   f"{result['signatures']} signature(s) in {result['path']}.", err=True)
+        click.echo(f"OK build approvals {version}: {result['path']}.", err=True)
 
     @build.command("validation")
     @click.option("--out-dir", required=True, type=click.Path(file_okay=False, path_type=Path),

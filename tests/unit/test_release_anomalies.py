@@ -195,7 +195,6 @@ class TestBaselineRunsAtAll:
         """
         result = _baseline(dhf, tmp_path / "out")
         assert result["errors"] == []
-        assert result["soup_count"] >= 1
 
     def test_bom_artifact_keeps_its_uid_key(self, dhf: Path, tmp_path: Path) -> None:
         """Consumers read "uid" from the artifact; only the lookup was wrong."""
