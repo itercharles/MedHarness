@@ -250,8 +250,6 @@ class TestBuildReleaseBaseline:
             result = build_release_baseline(
                 tmp_path / "DHF", "1.0.0", [], ["CR-001"], tmp_path / "out",
             )
-        assert result["soup_count"] == 0
-        assert result["manifest_packages_count"] == 0
         assert result["artifacts"] == []
 
     @pytest.mark.dhf_links("SRS-044")

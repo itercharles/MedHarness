@@ -11,6 +11,14 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.78.0] — 2026-11-12
+
+Counts that nothing read, removed. Breaking.
+
+### Removed
+- `soup_count` from the `build release` report. Only the stderr summary read it; the count is still in the release baseline file and the release notes.
+- `documents` and `signatures` from the `build approvals` report. Only the stderr summary read them; the sheet lists every document and signature. `cr_ids` stays in the `build release` report: with no `--cr` it is the only answer to which CRs the release took.
+
 ## [0.77.0] — 2026-11-12
 
 ### Changed

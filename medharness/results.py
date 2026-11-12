@@ -147,7 +147,6 @@ class ReleaseReport(Shape):
     version: str = Field(description="The version released")
     cr_ids: list[str] = Field(description="The completed CRs it includes")
     rel_uid: str | None = Field(description="The REL item recorded; null without `--write` or when a check failed")
-    soup_count: int = Field(description="SOUP items in the BOM")
     artifacts: list[str] = Field(description="Files written under `--out-dir`, relative to it")
     errors: list[str] = Field(description="What blocked the release; any exits 1, and a failing release still writes its evidence")
     warnings: list[str] = Field(description="What it noticed without blocking, such as a component with no purl")
@@ -158,8 +157,6 @@ class ApprovalSheetReport(Shape):
 
     version: str = Field(description="The release the sheet is for")
     path: str | None = Field(description="The sheet written; null when the release is not fully signed")
-    documents: int = Field(description="Documents on the sheet, the release itself included")
-    signatures: int = Field(description="Signature records the sheet shows")
     errors: list[str] = Field(description="Why no sheet was written, as `verify approval --release` reports it; any exits 1")
     warnings: list[str] = Field(description="What `verify approval --release` noticed, such as a signature made without proven presence")
 

@@ -276,7 +276,6 @@ An item is its file's fields plus `type` (the item type's code), `file_path`, an
 | `version` | string | The version released |
 | `cr_ids` | list of strings | The completed CRs it includes |
 | `rel_uid` | string or null | The REL item recorded; null without `--write` or when a check failed |
-| `soup_count` | integer | SOUP items in the BOM |
 | `artifacts` | list of strings | Files written under `--out-dir`, relative to it |
 | `errors` | list of strings | What blocked the release; any exits 1, and a failing release still writes its evidence |
 | `warnings` | list of strings | What it noticed without blocking, such as a component with no purl |
@@ -287,8 +286,6 @@ An item is its file's fields plus `type` (the item type's code), `file_path`, an
 |---|---|---|
 | `version` | string | The release the sheet is for |
 | `path` | string or null | The sheet written; null when the release is not fully signed |
-| `documents` | integer | Documents on the sheet, the release itself included |
-| `signatures` | integer | Signature records the sheet shows |
 | `errors` | list of strings | Why no sheet was written, as `verify approval --release` reports it; any exits 1 |
 | `warnings` | list of strings | What `verify approval --release` noticed, such as a signature made without proven presence |
 
