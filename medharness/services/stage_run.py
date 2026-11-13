@@ -182,7 +182,6 @@ def _build_response(
     )
     return {
         "cr_id": cr_id,
-        "stage": stage,
         "outcome": outcome,
         "summary": _build_summary(
             stage=stage,
@@ -279,32 +278,12 @@ def _review_not_approved(kind: str, verdict: str) -> dict | None:
                     f"Read the review before merging.")
 
 
-def _build_review_result(stage_label: str, log: list[dict]) -> dict:
-    """Build the client-facing review summary from per-cycle log entries.
-
-    Returns {"cycles": [...], "narrative": [str, ...]}.
-    """
-    narrative = [f"{stage_label} completed."]
-    for entry in log:
-        cycle = entry["cycle"]
-        verdict = entry["verdict"]
-        issues = entry.get("issues") or []
-        prefix = "Review" if cycle == 1 else f"Re-review (cycle {cycle})"
-        if verdict == "needs_revision":
-            n = len(issues)
-            issue_str = f"{n} issue{'s' if n != 1 else ''}" if n else "issues"
-            narrative.append(f"{prefix}: {issue_str} found — fix pass triggered.")
-        elif verdict == "approved":
-            msg = f"{prefix}: approved." if cycle == 1 else f"{prefix}: all issues resolved, approved."
-            narrative.append(msg)
-        else:
-            narrative.append(f"{prefix}: completed (verdict unknown).")
+def _build_review_result(log: list[dict]) -> dict:
     return {
         "cycles": [
             {"cycle": e["cycle"], "verdict": e["verdict"], "issues": e.get("issues") or []}
             for e in log
         ],
-        "narrative": narrative,
     }
 
 

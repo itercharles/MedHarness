@@ -66,7 +66,6 @@ class ReviewCycle(Shape):
 
 class Review(Shape):
     cycles: list[ReviewCycle] = Field(description="One entry per review round")
-    narrative: list[str] = Field(description="The rounds as sentences, for a log")
 
 
 class PlanArtifacts(Shape):
@@ -96,7 +95,6 @@ class StageReport(Shape):
 class PlanReport(StageReport):
     """`build plan`."""
 
-    stage: Literal["generate_dhf"] = Field(description="Always `generate_dhf` for `build plan`")
     artifacts: PlanArtifacts = Field(description="What the run changed")
     design_review: Review | None = Field(default=None, description="The design review rounds, when one ran")
 
@@ -110,7 +108,6 @@ class CheckResult(Shape):
 class CodeReport(StageReport):
     """`build code`."""
 
-    stage: Literal["develop"] = Field(description="Always `develop` for `build code`")
     artifacts: CodeArtifacts = Field(description="What the run changed")
     code_review: Review | None = Field(default=None, description="The code review rounds, when one ran")
     checks: list[CheckResult] | None = Field(default=None, description="Each `--check` as the harness last ran it; absent without `--check`")

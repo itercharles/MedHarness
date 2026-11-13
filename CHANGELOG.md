@@ -11,6 +11,17 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.79.0] — 2026-11-13
+
+Two more fields that restated something else, removed; one help text brought in line with what the command does. Breaking.
+
+### Removed
+- `stage` from the `build plan` and `build code` reports. It was `generate_dhf` or `develop` for every run of the command, under names the commands do not use.
+- `narrative` from `design_review` and `code_review`. It was `cycles` written out as sentences, and nothing read it.
+
+### Changed
+- `verify dhf --strict` is described as what it does: it fails on coverage gaps, placeholder title or content, and a completed CR that lacks a field its type requires of one. The help named only coverage.
+
 ## [0.78.0] — 2026-11-12
 
 Counts that nothing read, removed. Breaking.

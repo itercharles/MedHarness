@@ -127,7 +127,7 @@ def _run(*args: str):
 def _report(result) -> dict:
     """The run report, which must match what interface.md declares for the command."""
     report = json.loads(result.stdout.splitlines()[0])
-    (PlanReport if report["stage"] == "generate_dhf" else CodeReport).model_validate(report)
+    (PlanReport if "items_changed" in report["artifacts"] else CodeReport).model_validate(report)
     return report
 
 

@@ -126,48 +126,18 @@ class TestReadDesignReviewData:
 # ── _build_review_result ──────────────────────────────────────────────────────
 
 class TestBuildReviewResult:
-    def test_approved_on_first_pass(self):
-        log = [{"cycle": 1, "verdict": "approved", "issues": []}]
-        result = _build_review_result("Design", log)
-        assert result["cycles"] == [{"cycle": 1, "verdict": "approved", "issues": []}]
-        assert result["narrative"][0] == "Design completed."
-        assert "Review: approved." in result["narrative"][1]
-
-    def test_needs_revision_then_approved(self):
-        log = [
-            {"cycle": 1, "verdict": "needs_revision", "issues": ["item-1: bad", "item-2: wrong"]},
-            {"cycle": 2, "verdict": "approved", "issues": []},
-        ]
-        result = _build_review_result("Implementation", log)
-        assert "2 issues found" in result["narrative"][1]
-        assert "fix pass triggered" in result["narrative"][1]
-        assert "all issues resolved" in result["narrative"][2]
-
-    def test_singular_issue_label(self):
-        log = [{"cycle": 1, "verdict": "needs_revision", "issues": ["file.ts:1: error"]}]
-        result = _build_review_result("Design", log)
-        assert "1 issue found" in result["narrative"][1]
-        assert "issues found" not in result["narrative"][1].replace("1 issue found", "")
-
-    def test_unknown_verdict(self):
-        log = [{"cycle": 1, "verdict": "unknown", "issues": []}]
-        result = _build_review_result("Design", log)
-        assert "unknown" in result["narrative"][1]
-
     def test_cycles_list_matches_log(self):
         log = [
             {"cycle": 1, "verdict": "needs_revision", "issues": ["x"]},
             {"cycle": 2, "verdict": "approved", "issues": []},
         ]
-        result = _build_review_result("Design", log)
-        assert len(result["cycles"]) == 2
-        assert result["cycles"][0]["cycle"] == 1
-        assert result["cycles"][1]["cycle"] == 2
+        assert _build_review_result(log) == {"cycles": [
+            {"cycle": 1, "verdict": "needs_revision", "issues": ["x"]},
+            {"cycle": 2, "verdict": "approved", "issues": []},
+        ]}
 
-    def test_empty_log_produces_only_stage_line(self):
-        result = _build_review_result("Design", [])
-        assert result["narrative"] == ["Design completed."]
-        assert result["cycles"] == []
+    def test_empty_log_has_no_cycles(self):
+        assert _build_review_result([]) == {"cycles": []}
 
 
 # ── PR feedback ───────────────────────────────────────────────────────────────
@@ -295,7 +265,6 @@ class TestGenerateDhf:
             mock_claude.return_value = (0, "", "")
             result = generate_dhf("CR-050", dhf)
         assert result["cr_id"] == "CR-050"
-        assert result["stage"] == "generate_dhf"
         assert result["outcome"] == "ok"
         assert result["errors"] == []
         for key in ("summary", "steps", "artifacts", "warnings"):
@@ -373,8 +342,6 @@ class TestGenerateDhf:
         dr = result["design_review"]
         assert dr["cycles"][0] == {"cycle": 1, "verdict": "needs_revision", "issues": ["SYS-003: out of scope", "SWDD-002: notes unclear"]}
         assert dr["cycles"][1] == {"cycle": 2, "verdict": "approved", "issues": []}
-        assert "2 issues found" in dr["narrative"][1]
-        assert "all issues resolved" in dr["narrative"][2]
 
     def test_design_review_loop_stops_at_max_cycles(self, tmp_path):
         # verdict always needs_revision → loop runs _MAX_DESIGN_REVIEW_CYCLES times then stops
@@ -587,7 +554,6 @@ class TestGenerateCode:
             mock_claude.return_value = (0, "", "")
             result = generate_code("CR-020", dhf)
         assert result["cr_id"] == "CR-020"
-        assert result["stage"] == "develop"
         assert result["outcome"] == "ok"
         assert result["errors"] == []
         for key in ("summary", "steps", "artifacts", "warnings"):
@@ -791,8 +757,6 @@ class TestGenerateCode:
         cr = result["code_review"]
         assert cr["cycles"][0] == {"cycle": 1, "verdict": "needs_revision", "issues": ["src/foo.ts:12: missing null check"]}
         assert cr["cycles"][1] == {"cycle": 2, "verdict": "approved", "issues": []}
-        assert "1 issue found" in cr["narrative"][1]
-        assert "all issues resolved" in cr["narrative"][2]
 
     def test_code_review_loop_stops_at_max_cycles(self, tmp_path):
         # verdict always needs_revision → loop runs _MAX_CODE_REVIEW_CYCLES times then stops

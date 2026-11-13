@@ -242,7 +242,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None,
         _push_to_pr(run.repo_root, pr_number, f"design({cr_id}): build plan", errors)
 
     result = run.respond("generate_dhf", {"items_changed": items_changed}, errors)
-    result["design_review"] = _build_review_result("Design", design_review_log)
+    result["design_review"] = _build_review_result(design_review_log)
     if pr_number:
         token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN") or ""
         result["pr_comments"] = _auto_post_pr_feedback(pr_number, cr_id, result, token=token)
@@ -393,7 +393,7 @@ def generate_code(
         ))
 
     result = run.respond("develop", {"files_changed": files_changed}, errors)
-    result["code_review"] = _build_review_result("Implementation", code_review_log)
+    result["code_review"] = _build_review_result(code_review_log)
     if checks:
         result["checks"] = [{k: c[k] for k in ("command", "exit_code", "passed")} for c in check_results]
     if pr_number:
