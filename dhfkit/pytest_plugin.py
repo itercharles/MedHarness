@@ -21,8 +21,6 @@ coverage as well.
 
 from __future__ import annotations
 
-from typing import Callable
-
 import pytest
 
 
@@ -40,12 +38,12 @@ def pytest_configure(config: pytest.Config) -> None:
 
 
 @pytest.fixture(autouse=True)
-def _dhf_junit_properties(request: pytest.FixtureRequest, record_property: Callable[[str, object], None]) -> None:
+def _dhf_junit_properties(request: pytest.FixtureRequest) -> None:
     links_marker = request.node.get_closest_marker("dhf_links")
     testing_marker = request.node.get_closest_marker("dhf_testing")
 
     if links_marker:
-        record_property("medharness.links", ",".join(str(a) for a in links_marker.args))
+        request.node.user_properties.append(("medharness.links", ",".join(str(a) for a in links_marker.args)))
 
     if testing_marker:
-        record_property("medharness.testing", ",".join(str(a) for a in testing_marker.args))
+        request.node.user_properties.append(("medharness.testing", ",".join(str(a) for a in testing_marker.args)))

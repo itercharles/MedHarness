@@ -75,7 +75,7 @@ def test_a_cr_a_release_lists_cannot_be_reopened(dhf: Path) -> None:
 
     result = _run(dhf, "item", "transition", "CR-001", "develop")
 
-    assert result.exit_code == 1 and "not_released" in result.stderr, result.stderr
+    assert result.exit_code == 1 and "Not part of a release (included_items)" in result.stderr, result.stderr
     assert _status(dhf) == "completed"
 
 

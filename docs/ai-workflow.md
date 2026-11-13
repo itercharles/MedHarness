@@ -91,7 +91,7 @@ medharness --dhf DHF verify tests --cr CR-001 --junit test-results
 medharness --dhf DHF verify dhf --strict
 ```
 
-Run both on the branch to block the merge, and `verify tests --cr` again on `main`, where the tests re-run against whatever else landed.
+Run both on the branch to block the merge — the [`change-check` job](ci.md#setting-up-ci) of the CI recipe does, for any branch named for its CR, and `verify impact --cr CR-001` with them — and `verify tests --cr` again on `main`, where the tests re-run against whatever else landed.
 
 `verify tests --cr` judges the items this CR touched only, as under `--strict`, so the CR is not charged the DHF's other gaps, and requires the CR to carry what its type requires of the move to `completed`, whatever state it is in, so it can block the merge while the CR is still in `develop`. Every item in `affected_items` that is a requirement (CRS, SYS, SRS) must have `verification_method` set, and those with `Test` need passing JUnit evidence; the declared test points must each be covered. A CR that is not in the DHF fails.
 

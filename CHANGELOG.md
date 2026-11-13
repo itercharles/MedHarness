@@ -11,6 +11,22 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.81.0] — 2026-11-13
+
+What a new user ran into setting up a project, fixed.
+
+### Added
+- The CI recipe has a `change-check` job: on a pull request from a branch ending in a CR's ID (`develop/CR-012`) it runs `verify impact` and `verify tests --cr`, so the merge is blocked on the CR's evidence, not only on the DHF's shape. Other branches are skipped. `dhf-validate` now runs on every pull request, not only those touching `DHF/`.
+
+### Changed
+- `item create`, `item update` and `item transition` answer with the item as `item get` shows it. `create` now includes `file_path`; `transition` no longer carries a stray `uid`.
+- `item create` no longer writes `type` into the item's file: it is the ID's prefix, and `item get` derives it.
+- A refused `item transition` names what is unmet and the field to fill: `CR-001 cannot move to 'develop': Implementation notes written (implementation_notes).` It named only an internal criterion ID.
+- `init`'s next steps say the `verify tests` line needs JUnit from your tests first, and link the CI recipe by URL, since `docs/ci.md` is not in the project.
+
+### Fixed
+- The pytest plugin no longer makes pytest warn on every test under the default `junit_family`: it adds the `medharness.*` properties itself instead of through `record_property`.
+
 ## [0.80.1] — 2026-11-13
 
 ### Changed

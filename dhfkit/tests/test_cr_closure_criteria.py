@@ -48,7 +48,7 @@ class TestClosureIsRefusedUntilTheRecordExists:
         dhf, cr_id = cr
         with pytest.raises(ValueError) as exc:
             open_store(dhf).execute_transition(cr_id, "completed")
-        assert "implementation_recorded" in str(exc.value)
+        assert "Implementation notes written (implementation_notes)" in str(exc.value)
         assert open_store(dhf).get_item(cr_id)["status"] == "develop", "state changed anyway"
 
     @pytest.mark.parametrize("omit", sorted(CLOSURE))
@@ -60,12 +60,7 @@ class TestClosureIsRefusedUntilTheRecordExists:
         open_store(dhf).update_item(cr_id, {k: v for k, v in CLOSURE.items() if k != omit})
         with pytest.raises(ValueError) as exc:
             open_store(dhf).execute_transition(cr_id, "completed")
-        expected = {
-            "implementation_notes": "implementation_recorded",
-            "affected_risk_items": "risk_impact_assessed",
-            "affected_items": "affected_items_recorded",
-        }[omit]
-        assert expected in str(exc.value)
+        assert f"({omit})" in str(exc.value)
 
     @pytest.mark.dhf_links("SRS-062")
     @pytest.mark.dhf_testing("T1")
@@ -101,5 +96,5 @@ class TestAssessedAndEmptyIsAnAnswer:
         open_store(dhf).update_item(cr_id, {
             k: v for k, v in CLOSURE.items() if k != "affected_risk_items"
         })
-        with pytest.raises(ValueError, match="risk_impact_assessed"):
+        with pytest.raises(ValueError, match=r"\(affected_risk_items\)"):
             open_store(dhf).execute_transition(cr_id, "completed")

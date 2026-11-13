@@ -196,7 +196,7 @@ class ItemStore:
     def create_item(self, data: dict) -> dict:
         # CR-006: ID is always auto-generated; any caller-supplied id is ignored
         data = {k: v for k, v in data.items() if k != 'id'}
-        doc_type_code = data.get('type')
+        doc_type_code = data.pop('type', None)
         if not doc_type_code:
             raise ValueError("Cannot auto-generate ID: document type not specified")
         dt_cfg = self._config.get_doc_type(doc_type_code)
@@ -230,7 +230,7 @@ class ItemStore:
 
         item = Item.model_validate(data)
         self._adapter.save(item)
-        return self._enrich_item_dict(item)
+        return self.get_item(item.uid)
 
     def update_item(self, uid: str, data: dict) -> Optional[dict]:
         """Write the fields given. A lifecycle state is not one of them: it moves only by transition,
@@ -298,7 +298,7 @@ class ItemStore:
             raise RefusedWrite(f"{uid} not updated: {exc}") from exc
         item = Item.model_validate(updated_data)
         self._adapter.save(item)
-        return self._enrich_item_dict(item)
+        return self.get_item(item.uid)
 
     def get_available_transitions(self, item_id: str) -> List[Dict]:
         """Return available lifecycle transitions for an item."""

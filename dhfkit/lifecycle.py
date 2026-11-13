@@ -137,7 +137,8 @@ def get_available_transitions(
     return available
 
 
-def unmet_criteria(config: ProjectConfig, item: Dict[str, Any], to_state: str) -> List[Dict[str, Any]]:
+def unmet_criteria(config: ProjectConfig, item: Dict[str, Any], to_state: str,
+                   listed_in: Optional[ListedIn] = None) -> List[Dict[str, Any]]:
     """The required criteria of the transition into *to_state* that *item* does not meet.
 
     Whatever state the item is in now: a gate that runs after the transition, on `main`, asks
@@ -149,7 +150,7 @@ def unmet_criteria(config: ProjectConfig, item: Dict[str, Any], to_state: str) -
         if transition.get("to_state") != to_state:
             continue
         criteria = transition.get("criteria", [])
-        _, blocking = _validate_criteria(item, criteria)
+        _, blocking = _validate_criteria(item, criteria, listed_in)
         for criterion in criteria:
             if criterion.get("id") in blocking:
                 unmet.setdefault(criterion["id"], {
@@ -190,8 +191,10 @@ def execute_transition(
             f"Transition to '{to_state}' is not allowed from state '{item.get('status')}'."
         )
     if not transition["can_transition"]:
-        blocking = ", ".join(transition["blocking_criteria"])
-        raise ValueError(f"Blocking criteria not met: {blocking}")
+        unmet = unmet_criteria(config, item, to_state, listed_in)
+        named = [f"{c['name']} ({c['field']})" if c["field"] else c["name"] for c in unmet]
+        reason = "; ".join(named) or ", ".join(transition["blocking_criteria"])
+        raise ValueError(f"{item_id} cannot move to '{to_state}': {reason}.")
 
     item["status"] = to_state
     return update_item_fn(item_id, item)
