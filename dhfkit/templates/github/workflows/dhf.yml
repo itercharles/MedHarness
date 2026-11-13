@@ -2,8 +2,6 @@ name: DHF
 
 on:
   pull_request:
-    paths:
-      - 'DHF/**'
   push:
     branches:
       - main
@@ -29,6 +27,46 @@ jobs:
       # links block.
       - name: Schema and traceability check
         run: medharness --dhf DHF verify dhf --strict
+
+  change-check:
+    name: Check the change request
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - run: pip install medharness=={{medharness_version}}
+
+      # The CR is named by the branch: design/CR-012, develop/CR-012, cr/CR-012.
+      # A branch that does not end in one is not a change request and is not checked.
+      - name: Find the change request
+        id: cr
+        env:
+          BRANCH: ${{ github.head_ref }}
+        run: echo "id=$(echo "$BRANCH" | grep -oE 'CR-[0-9]+$' || true)" >> "$GITHUB_OUTPUT"
+
+      - name: Impact record against the branch
+        if: steps.cr.outputs.id != ''
+        env:
+          CR: ${{ steps.cr.outputs.id }}
+          BASE: ${{ github.base_ref }}
+        run: medharness --dhf DHF verify impact --cr "$CR" --since-ref "origin/$BASE"
+
+      - name: Run the tests
+        if: steps.cr.outputs.id != ''
+        run: "{{test_command}}"
+
+      - name: What the CR changed is verified, and the CR can close
+        if: steps.cr.outputs.id != ''
+        env:
+          CR: ${{ steps.cr.outputs.id }}
+        run: medharness --dhf DHF verify tests --cr "$CR" --junit test-results
 
   release:
     name: Release

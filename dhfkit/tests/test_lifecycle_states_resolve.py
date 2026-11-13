@@ -65,14 +65,14 @@ class TestTheScaffoldedCRCanReachCompleted:
         replace_placeholders(tmp_path, "Lifecycle")
         dhf = tmp_path / "DHF"
         open_store(dhf).execute_transition("CR-001", "design")
-        with pytest.raises(ValueError, match="design_recorded"):
+        with pytest.raises(ValueError, match="Implementation notes written"):
             open_store(dhf).execute_transition("CR-001", "develop")
         open_store(dhf).update_item("CR-001", {
             "implementation_notes": "Plan.",
         })
         open_store(dhf).execute_transition("CR-001", "develop")
 
-        with pytest.raises(ValueError, match="risk_impact_assessed"):
+        with pytest.raises(ValueError, match=r"\(affected_risk_items\)"):
             open_store(dhf).execute_transition("CR-001", "completed")
 
         open_store(dhf).update_item("CR-001", {

@@ -109,3 +109,21 @@ def test_single_dhf_link(pytester: pytest.Pytester) -> None:
 
     props = _properties(xml, "test_one")
     assert props.get("medharness.links") == "SRS-001"
+
+
+@pytest.mark.parametrize("family", ["xunit1", "xunit2"])
+def test_the_properties_are_written_without_a_warning_under_either_junit_family(
+    pytester: pytest.Pytester, family: str
+) -> None:
+    pytester.makepyfile("""
+        import pytest
+
+        @pytest.mark.dhf_links("SRS-001")
+        def test_example():
+            pass
+    """)
+    xml = pytester.path / "result.xml"
+    result = pytester.runpytest(f"--junit-xml={xml}", "-o", f"junit_family={family}")
+    result.assert_outcomes(passed=1, warnings=0)
+
+    assert _properties(xml, "test_example").get("medharness.links") == "SRS-001"

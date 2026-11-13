@@ -239,9 +239,10 @@ def run_init() -> dict:
     say()
     say("  3. Check it, from this directory:", bold=True)
     say("       medharness verify dhf")
-    say("       medharness verify tests --junit test-results")
+    say("       medharness verify tests --junit test-results   # once your tests have written JUnit XML there")
     say()
-    say("  4. Add CI: copy the recipe in docs/ci.md, 'Setting up CI'.", bold=True)
+    say("  4. Add CI: copy the recipe in 'Setting up CI',", bold=True)
+    say("       https://github.com/itercharles/MedHarness/blob/main/docs/ci.md#setting-up-ci", bold=True)
     say()
 
     return {"project_dir": str(project_dir), "project_name": project_name, "created": created}

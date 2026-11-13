@@ -6,7 +6,7 @@ The CI recipe is the whole deployment; a release is cut from it. The AI stages i
 
 `init` does not write a CI workflow, because the pipeline references your branch names, runner labels and secrets. You own it.
 
-Copy the recipe below into `.github/workflows/dhf.yml`, replace `{{medharness_version}}` with the version you pin, and `{{test_command}}` with the command that runs your tests and writes JUnit XML into `test-results/` (for pytest, `pytest --junit-xml=test-results/junit.xml`). It is the whole deployment — two jobs, no server, no database, no account:
+Copy the recipe below into `.github/workflows/dhf.yml`, replace `{{medharness_version}}` with the version you pin, and `{{test_command}}` with the command that runs your tests and writes JUnit XML into `test-results/` (for pytest, `pytest --junit-xml=test-results/junit.xml`). It is the whole deployment — three jobs, no server, no database, no account:
 
 <details>
 <summary><code>.github/workflows/dhf.yml</code></summary>
@@ -16,8 +16,6 @@ name: DHF
 
 on:
   pull_request:
-    paths:
-      - 'DHF/**'
   push:
     branches:
       - main
@@ -43,6 +41,46 @@ jobs:
       # links block.
       - name: Schema and traceability check
         run: medharness --dhf DHF verify dhf --strict
+
+  change-check:
+    name: Check the change request
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - run: pip install medharness=={{medharness_version}}
+
+      # The CR is named by the branch: design/CR-012, develop/CR-012, cr/CR-012.
+      # A branch that does not end in one is not a change request and is not checked.
+      - name: Find the change request
+        id: cr
+        env:
+          BRANCH: ${{ github.head_ref }}
+        run: echo "id=$(echo "$BRANCH" | grep -oE 'CR-[0-9]+$' || true)" >> "$GITHUB_OUTPUT"
+
+      - name: Impact record against the branch
+        if: steps.cr.outputs.id != ''
+        env:
+          CR: ${{ steps.cr.outputs.id }}
+          BASE: ${{ github.base_ref }}
+        run: medharness --dhf DHF verify impact --cr "$CR" --since-ref "origin/$BASE"
+
+      - name: Run the tests
+        if: steps.cr.outputs.id != ''
+        run: "{{test_command}}"
+
+      - name: What the CR changed is verified, and the CR can close
+        if: steps.cr.outputs.id != ''
+        env:
+          CR: ${{ steps.cr.outputs.id }}
+        run: medharness --dhf DHF verify tests --cr "$CR" --junit test-results
 
   release:
     name: Release
@@ -118,10 +156,11 @@ What each job does:
 
 | Job | Trigger | Purpose |
 |-----|---------|---------|
-| `dhf-validate` | PRs touching `DHF/**`, pushes to `main` | Schema, required links, dangling links, coverage |
+| `dhf-validate` | PRs, pushes to `main` | Schema, required links, dangling links, coverage |
+| `change-check` | PRs from a branch ending in a CR's ID (`develop/CR-012`) | `verify impact` and `verify tests --cr`: the CR's record of its impact holds for the branch, and what it changed is verified. Other branches are skipped |
 | `release` | `v*` tags | Runs `build release`: the baseline, BOM, SBOM and evidence bundle as a workflow artifact, and the REL item back to `main` through a pull request |
 
-Adopt it incrementally: `dhf-validate` alone is useful from day one. Add `release` when you start cutting versions. Evidence is produced once per release, not on every merge.
+Adopt it incrementally: `dhf-validate` alone is useful from day one. Add `change-check` when changes go through change requests, and `release` when you start cutting versions. Evidence is produced once per release, not on every merge.
 
 Writing your own pipeline instead? [interface.md](interface.md) is the contract — the result shape every gate returns, exit-code semantics, and what may change between versions.
 
