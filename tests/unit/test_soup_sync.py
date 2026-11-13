@@ -205,7 +205,6 @@ class TestDiffAgainstDhf:
         diff = diff_against_dhf([], soup)
         assert len(diff["orphans"]) == 1
         # diff_against_dhf returns the raw items, which carry "id".
-        # sync_soup_items converts them to artifact dicts keyed "uid".
         assert diff["orphans"][0]["id"] == "SOUP-001"
 
     def test_fuzzy_name_matching(self):
@@ -246,7 +245,7 @@ class TestSyncSoupItems:
 
         mock_update.assert_called_once_with("SOUP-001", {"version": "8.1.7"})
         assert result["to_update"] == [
-            {"uid": "SOUP-001", "name": "click", "old_version": "8.0.0", "new_version": "8.1.7"}]
+            {"id": "SOUP-001", "name": "click", "old_version": "8.0.0", "new_version": "8.1.7"}]
 
     @pytest.mark.dhf_links("SRS-070")
     @pytest.mark.dhf_testing("T4")
@@ -267,7 +266,7 @@ class TestSyncSoupItems:
             result = sync_soup_items(tmp_path / "DHF", [req, pkg])
 
         assert len(result["items_created"]) == 2
-        assert len(result["manifests_parsed"]) == 2
+        assert len(result["dependency_files"]) == 2
 
     @pytest.mark.dhf_links("SRS-070")
     @pytest.mark.dhf_testing("T5")

@@ -44,7 +44,7 @@ def _manifest(directory: Path, **deps: str) -> Path:
 
 def _versions(project: Path, manifest: Path) -> dict[str, str]:
     result = CliRunner().invoke(main, ["--dhf", str(project / "DHF"), "build", "soup",
-                                       "--manifest", str(manifest)])
+                                       "--dependency-file", str(manifest)])
     assert result.exit_code == 0, result.stderr
     items = {}
     for path in (project / "DHF" / "items").rglob("SOUP-*.yaml"):

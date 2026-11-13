@@ -30,8 +30,8 @@ def test_srs_has_sys_parent_pass():
         {"source_type": "SRS", "direction": "upstream", "field": "derives_from", "target_type": "SYS", "min_count": 1},
     ])
     items = [
-        {"id": "SRS-001", "derives_from": ["SYS-001"], "all_linked_uids": ["SYS-001"]},
-        {"id": "SYS-001", "all_linked_uids": []},
+        {"id": "SRS-001", "derives_from": ["SYS-001"], "all_linked_ids": ["SYS-001"]},
+        {"id": "SYS-001", "all_linked_ids": []},
     ]
     result = check_required_traceability(items, config)
     assert result["passed"] is True
@@ -43,8 +43,8 @@ def test_srs_missing_sys_parent_fail():
         {"source_type": "SRS", "direction": "upstream", "field": "derives_from", "target_type": "SYS", "min_count": 1},
     ])
     items = [
-        {"id": "SRS-001", "derives_from": [], "all_linked_uids": []},
-        {"id": "SYS-001", "all_linked_uids": []},
+        {"id": "SRS-001", "derives_from": [], "all_linked_ids": []},
+        {"id": "SYS-001", "all_linked_ids": []},
     ]
     result = check_required_traceability(items, config)
     assert result["passed"] is False
@@ -58,8 +58,8 @@ def test_srs_wrong_target_type_fail():
         {"source_type": "SRS", "direction": "upstream", "field": "derives_from", "target_type": "SYS", "min_count": 1},
     ])
     items = [
-        {"id": "SRS-001", "derives_from": ["CRS-001"], "all_linked_uids": ["CRS-001"]},
-        {"id": "CRS-001", "all_linked_uids": []},
+        {"id": "SRS-001", "derives_from": ["CRS-001"], "all_linked_ids": ["CRS-001"]},
+        {"id": "CRS-001", "all_linked_ids": []},
     ]
     result = check_required_traceability(items, config)
     assert result["passed"] is False
@@ -71,8 +71,8 @@ def test_srs_min_count_2_with_one_link_fail():
         {"source_type": "SRS", "direction": "upstream", "field": "derives_from", "target_type": "SYS", "min_count": 2},
     ])
     items = [
-        {"id": "SRS-001", "derives_from": ["SYS-001"], "all_linked_uids": ["SYS-001"]},
-        {"id": "SYS-001", "all_linked_uids": []},
+        {"id": "SRS-001", "derives_from": ["SYS-001"], "all_linked_ids": ["SYS-001"]},
+        {"id": "SYS-001", "all_linked_ids": []},
     ]
     result = check_required_traceability(items, config)
     assert result["passed"] is False
@@ -87,8 +87,8 @@ def test_rcm_missing_risk_fail():
         {"source_type": "RCM", "direction": "upstream", "field": "mitigates", "target_type": "RISK", "min_count": 1},
     ])
     items = [
-        {"id": "RCM-001", "mitigates": [], "all_linked_uids": []},
-        {"id": "RISK-001", "all_linked_uids": []},
+        {"id": "RCM-001", "mitigates": [], "all_linked_ids": []},
+        {"id": "RISK-001", "all_linked_ids": []},
     ]
     result = check_required_traceability(items, config)
     assert result["passed"] is False
@@ -100,8 +100,8 @@ def test_rcm_has_risk_pass():
         {"source_type": "RCM", "direction": "upstream", "field": "mitigates", "target_type": "RISK", "min_count": 1},
     ])
     items = [
-        {"id": "RCM-001", "mitigates": ["RISK-001"], "all_linked_uids": ["RISK-001"]},
-        {"id": "RISK-001", "all_linked_uids": []},
+        {"id": "RCM-001", "mitigates": ["RISK-001"], "all_linked_ids": ["RISK-001"]},
+        {"id": "RISK-001", "all_linked_ids": []},
     ]
     result = check_required_traceability(items, config)
     assert result["passed"] is True
@@ -114,8 +114,8 @@ def test_rcm_missing_sys_implements_fail():
         {"source_type": "RCM", "direction": "upstream", "field": "implements", "target_type": "SYS", "min_count": 1},
     ])
     items = [
-        {"id": "RCM-001", "implements": [], "all_linked_uids": []},
-        {"id": "SYS-001", "all_linked_uids": []},
+        {"id": "RCM-001", "implements": [], "all_linked_ids": []},
+        {"id": "SYS-001", "all_linked_ids": []},
     ]
     result = check_required_traceability(items, config)
     assert result["passed"] is False
@@ -127,8 +127,8 @@ def test_rcm_has_sys_implements_pass():
         {"source_type": "RCM", "direction": "upstream", "field": "implements", "target_type": "SYS", "min_count": 1},
     ])
     items = [
-        {"id": "RCM-001", "implements": ["SYS-001"], "all_linked_uids": ["SYS-001"]},
-        {"id": "SYS-001", "all_linked_uids": []},
+        {"id": "RCM-001", "implements": ["SYS-001"], "all_linked_ids": ["SYS-001"]},
+        {"id": "SYS-001", "all_linked_ids": []},
     ]
     result = check_required_traceability(items, config)
     assert result["passed"] is True
@@ -141,9 +141,9 @@ def test_crs_covered_by_sys_pass():
         {"source_type": "CRS", "direction": "downstream", "target_type": "SYS", "min_count": 1},
     ])
     items = [
-        {"id": "CRS-001", "all_linked_uids": ["UC-001"]},
-        {"id": "SYS-001", "satisfies": ["CRS-001"], "all_linked_uids": ["CRS-001"]},
-        {"id": "UC-001", "all_linked_uids": []},
+        {"id": "CRS-001", "all_linked_ids": ["UC-001"]},
+        {"id": "SYS-001", "satisfies": ["CRS-001"], "all_linked_ids": ["CRS-001"]},
+        {"id": "UC-001", "all_linked_ids": []},
     ]
     result = check_required_traceability(items, config)
     assert result["passed"] is True
@@ -154,9 +154,9 @@ def test_crs_not_covered_by_sys_fail():
         {"source_type": "CRS", "direction": "downstream", "target_type": "SYS", "min_count": 1},
     ])
     items = [
-        {"id": "CRS-001", "all_linked_uids": ["UC-001"]},
-        {"id": "SYS-001", "satisfies": ["CRS-002"], "all_linked_uids": ["CRS-002"]},
-        {"id": "UC-001", "all_linked_uids": []},
+        {"id": "CRS-001", "all_linked_ids": ["UC-001"]},
+        {"id": "SYS-001", "satisfies": ["CRS-002"], "all_linked_ids": ["CRS-002"]},
+        {"id": "UC-001", "all_linked_ids": []},
     ]
     result = check_required_traceability(items, config)
     assert result["passed"] is False
@@ -171,8 +171,8 @@ def test_swdd_missing_srs_fail():
         {"source_type": "SWDD", "direction": "upstream", "field": "implements", "target_type": "SRS", "min_count": 1},
     ])
     items = [
-        {"id": "SWDD-001", "implements": [], "all_linked_uids": []},
-        {"id": "SRS-001", "all_linked_uids": []},
+        {"id": "SWDD-001", "implements": [], "all_linked_ids": []},
+        {"id": "SRS-001", "all_linked_ids": []},
     ]
     result = check_required_traceability(items, config)
     assert result["passed"] is False
@@ -184,8 +184,8 @@ def test_swdd_has_srs_pass():
         {"source_type": "SWDD", "direction": "upstream", "field": "implements", "target_type": "SRS", "min_count": 1},
     ])
     items = [
-        {"id": "SWDD-001", "implements": ["SRS-001"], "all_linked_uids": ["SRS-001"]},
-        {"id": "SRS-001", "all_linked_uids": []},
+        {"id": "SWDD-001", "implements": ["SRS-001"], "all_linked_ids": ["SRS-001"]},
+        {"id": "SRS-001", "all_linked_ids": []},
     ]
     result = check_required_traceability(items, config)
     assert result["passed"] is True
@@ -197,7 +197,7 @@ def test_explicit_empty_rules_skips_vmodel_defaults():
     """required_traceability=[] (explicit empty) opts out of V-model defaults."""
     config = _make_config([])
     items = [
-        {"id": "SRS-001", "derives_from": [], "all_linked_uids": []},
+        {"id": "SRS-001", "derives_from": [], "all_linked_ids": []},
     ]
     result = check_required_traceability(items, config)
     assert result["passed"] is True
@@ -213,8 +213,8 @@ def test_vmodel_defaults_pass_when_links_correct():
         ],
     )
     items = [
-        {"id": "SRS-001", "derives_from": ["SYS-001"], "all_linked_uids": ["SYS-001"]},
-        {"id": "SYS-001", "all_linked_uids": []},
+        {"id": "SRS-001", "derives_from": ["SYS-001"], "all_linked_ids": ["SYS-001"]},
+        {"id": "SYS-001", "all_linked_ids": []},
     ]
     result = check_required_traceability(items, config)
     assert result["passed"] is True
@@ -249,13 +249,13 @@ def test_module_swdd_coverage_passes():
 
     swdd = Item.model_validate({"id": "SWDD-001", "title": "t", "implements": ["SRS-001"], "module": ["MODULE-001"]})
     items = [
-        {"id": "MODULE-001", "all_linked_uids": []},
+        {"id": "MODULE-001", "all_linked_ids": []},
         # SRS-001 is present so the set is self-consistent — SWDD-001 implements
         # it, and an absent target would (correctly) register as a dangling link.
-        {"id": "SRS-001", "all_linked_uids": []},
+        {"id": "SRS-001", "all_linked_ids": []},
         {
             "id": "SWDD-001",
-            "all_linked_uids": ["MODULE-001", "SRS-001"],
+            "all_linked_ids": ["MODULE-001", "SRS-001"],
             "module": swdd.module,
             "implements": swdd.implements,
         },
@@ -270,8 +270,8 @@ def test_module_swdd_coverage_fails_when_no_swdd_links_module():
     from medharness.services.traceability import check_traceability
 
     items = [
-        {"id": "MODULE-001", "all_linked_uids": []},
-        {"id": "SWDD-001", "all_linked_uids": [], "implements": ["SRS-001"]},
+        {"id": "MODULE-001", "all_linked_ids": []},
+        {"id": "SWDD-001", "all_linked_ids": [], "implements": ["SRS-001"]},
     ]
     result = check_traceability(items, _module_swdd_config())
     coverage = {r["matrix"]: r for r in result["coverage"]}
@@ -286,8 +286,8 @@ def test_swdd_module_required_link_rule():
         {"source_type": "SWDD", "direction": "upstream", "field": "module", "target_type": "MODULE", "min_count": 1},
     ])
     items = [
-        {"id": "MODULE-001", "all_linked_uids": []},
-        {"id": "SWDD-001", "all_linked_uids": ["SRS-001"], "module": []},
+        {"id": "MODULE-001", "all_linked_ids": []},
+        {"id": "SWDD-001", "all_linked_ids": ["SRS-001"], "module": []},
     ]
     result = check_traceability(items, config)
     failures = [f["id"] for f in result["required"]["failures"]]

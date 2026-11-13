@@ -539,11 +539,11 @@ def impact_analysis_closure_errors(cr_item: dict, items: list[dict], config,
         if role(uid) in ("risk", "risk_control") and uid not in risk_items:
             missing_risk[uid] = f"{uid} is a changed risk item"
         for control in items:
-            if role(control["id"]) != "risk_control" or uid not in (control.get("all_linked_uids") or []):
+            if role(control["id"]) != "risk_control" or uid not in (control.get("all_linked_ids") or []):
                 continue
             if control["id"] not in risk_items:
                 missing_risk.setdefault(control["id"], f"{control['id']} controls {uid}, which changed")
-            for linked in control.get("all_linked_uids") or []:
+            for linked in control.get("all_linked_ids") or []:
                 if role(linked) == "risk" and linked not in risk_items:
                     missing_risk.setdefault(linked, f"{linked} is mitigated by {control['id']}, which controls {uid}")
     for uid, why in sorted(missing_risk.items()):

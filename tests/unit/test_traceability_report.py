@@ -32,7 +32,7 @@ CONFIG = _config(TYPES)
 
 
 def _item(item_id: str, *links: str) -> dict:
-    return {"id": item_id, "title": item_id.lower(), "all_linked_uids": list(links)}
+    return {"id": item_id, "title": item_id.lower(), "all_linked_ids": list(links)}
 
 
 ITEMS = [

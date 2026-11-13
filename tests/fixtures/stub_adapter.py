@@ -63,7 +63,7 @@ class StubDHFAdapter:
         if "type" not in self._items[uid]:
             doc_type = self.config.doc_type_of(uid)
             self._items[uid]["type"] = doc_type.code if doc_type else uid.split("-")[0]
-        _add_all_linked_uids(self._items[uid])
+        _add_all_linked_ids(self._items[uid])
         return self._items[uid]
 
     def update_item(self, uid: str, data: dict, author: Optional[str] = None, cr_id: Optional[str] = None) -> Optional[dict]:
@@ -156,11 +156,11 @@ class StubDHFAdapter:
         return f"{type_prefix}-{n:03d}"
 
 
-def _add_all_linked_uids(item: dict) -> None:
+def _add_all_linked_ids(item: dict) -> None:
     _LINK_FIELDS = ("derives_from", "implements", "mitigates", "satisfies", "guided_by", "informs", "design", "verifies", "validates")
     linked = []
     for field in _LINK_FIELDS:
         vals = item.get(field)
         if isinstance(vals, list):
             linked.extend(vals)
-    item["all_linked_uids"] = linked
+    item["all_linked_ids"] = linked

@@ -74,7 +74,7 @@ class TestItSeesTheRegisterDrift:
         manifest.write_text("example-library==2.0.0\n")
         with patch("urllib.request.urlopen", side_effect=OSError("offline")):
             result = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", "soup", "--strict",
-                                               "--manifest", str(manifest), "--offline-mode", "warn"])
+                                               "--dependency-file", str(manifest), "--offline-mode", "warn"])
         answer = json.loads(result.stdout.splitlines()[0])
         assert result.exit_code == 1
         assert "SOUP-001 records 1.0.0, manifests resolve 2.0.0" in answer["errors"], answer["errors"]

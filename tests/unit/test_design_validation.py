@@ -38,7 +38,7 @@ class TestValidateGenerateDhf:
              patch("medharness.services.verify_dhf.analyse", return_value={"passed": True}), \
              patch("dhfkit.item_store.ItemStore.list_items", return_value=[
                  {"id": "SYS-001", "type": "SYS", "title": "Existing req",
-                  "all_linked_uids": [], "verification_criteria": ""},
+                  "all_linked_ids": [], "verification_criteria": ""},
              ]):
             errors = validate_generate_dhf(
                 "CR-001", dhf, {"created": [], "updated": ["SYS-001"], "deleted": []}
@@ -53,7 +53,7 @@ class TestValidateGenerateDhf:
              patch("medharness.services.verify_dhf.analyse", return_value={"passed": True}), \
              patch("dhfkit.item_store.ItemStore.list_items", return_value=[
                  {"id": "SYS-001", "type": "SYS", "title": "Existing req",
-                  "all_linked_uids": [], "verification_criteria": "Response < 2s."},
+                  "all_linked_ids": [], "verification_criteria": "Response < 2s."},
              ]):
             errors = validate_generate_dhf(
                 "CR-001", dhf, {"created": [], "updated": ["SYS-001"], "deleted": []}
@@ -66,7 +66,7 @@ class TestValidateGenerateDhf:
              patch("medharness.services.verify_dhf.analyse", return_value={"passed": True}), \
              patch("dhfkit.item_store.ItemStore.list_items", return_value=[
                  {"id": "SWDD-001", "type": "SWDD", "title": "Existing design",
-                  "all_linked_uids": []},
+                  "all_linked_ids": []},
              ]):
             errors = validate_generate_dhf(
                 "CR-001", dhf, {"created": [], "updated": ["SWDD-001"], "deleted": []}
@@ -77,7 +77,7 @@ class TestValidateGenerateDhf:
 class TestCheckVerificationQuality:
     def _items(self, vc: str, item_id: str = "SRS-001") -> list[dict]:
         return [{"id": item_id, "type": item_id.split("-")[0],
-                 "title": "Test", "all_linked_uids": [], "verification_criteria": vc}]
+                 "title": "Test", "all_linked_ids": [], "verification_criteria": vc}]
 
     def test_vague_phrase_returns_warning(self, dhf):
         with patch("dhfkit.item_store.ItemStore.list_items", return_value=self._items("The feature works correctly.")):
@@ -100,7 +100,7 @@ class TestCheckVerificationQuality:
 
     def test_swdd_item_not_checked(self, dhf):
         items = [{"id": "SWDD-001", "type": "SWDD", "title": "Design",
-                  "all_linked_uids": [], "verification_criteria": "behaves as expected"}]
+                  "all_linked_ids": [], "verification_criteria": "behaves as expected"}]
         with patch("dhfkit.item_store.ItemStore.list_items", return_value=items):
             result = check_verification_quality(dhf, {"created": ["SWDD-001"], "updated": []})
         assert result == []
@@ -108,9 +108,9 @@ class TestCheckVerificationQuality:
     def test_only_changed_items_are_checked(self, dhf):
         items = [
             {"id": "SRS-001", "type": "SRS", "title": "A",
-             "all_linked_uids": [], "verification_criteria": "works correctly"},
+             "all_linked_ids": [], "verification_criteria": "works correctly"},
             {"id": "SRS-002", "type": "SRS", "title": "B",
-             "all_linked_uids": [], "verification_criteria": "works correctly"},
+             "all_linked_ids": [], "verification_criteria": "works correctly"},
         ]
         with patch("dhfkit.item_store.ItemStore.list_items", return_value=items):
             result = check_verification_quality(dhf, {"created": ["SRS-001"], "updated": []})

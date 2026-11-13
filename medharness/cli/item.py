@@ -83,15 +83,15 @@ def register(main):
             anchor = adapter.get_item(linked_to)
             if anchor is None:
                 raise click.ClickException(f"Item '{linked_to}' not found.")
-            reached = set(anchor.get("all_linked_uids") or [])
+            reached = set(anchor.get("all_linked_ids") or [])
             items = [it for it in items
-                     if it["id"] in reached or linked_to in (it.get("all_linked_uids") or [])]
+                     if it["id"] in reached or linked_to in (it.get("all_linked_ids") or [])]
         if terms:
             items = [it for it in items if _has_every_term(it, terms)]
         for it in items:
             if brief:
                 it = {"id": it["id"], "type": it.get("type", ""), "title": it.get("title", ""),
-                      "links": it.get("all_linked_uids") or []}
+                      "links": it.get("all_linked_ids") or []}
             click.echo(json.dumps(it, default=str))
         click.echo(f"({len(items)} item(s))", err=True)
 

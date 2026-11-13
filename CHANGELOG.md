@@ -11,6 +11,14 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.80.0] — 2026-11-13
+
+Two names that meant more than one thing, made one thing each. Breaking.
+
+### Changed
+- `--manifest` is `--dependency-file` on `build soup`, `verify soup` and `build release`. "Manifest" also names `DHF/releases/VERSION/manifest.yaml`, which `item approve --release` and `verify approval --release` read, so one word named two kinds of file. The `build soup` report's `manifests_parsed` is `dependency_files` to match. `type: manifest` in `soup-sources.yaml` and the `dhfkit:manifest_source` SBOM property keep their names.
+- An item's ID is `id` everywhere it is reported; `uid` was left over from before items had one. `build release` answers `rel_id` (was `rel_uid`), the `build soup` report's `to_update` and `orphans` entries carry `id` (was `uid`), `item get` answers `all_linked_ids` (was `all_linked_uids`), and `dhf_soup` in `software-bom.json` lists each SOUP item under `id` (was `uid`). A project that reads `software-bom.json` reads the new key from releases built with 0.80.0; the files of earlier releases keep `uid`.
+
 ## [0.79.0] — 2026-11-13
 
 Two more fields that restated something else, removed; one help text brought in line with what the command does. Breaking.

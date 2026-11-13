@@ -4,7 +4,7 @@
 checked its output against a fixed `CRS → SYS → SRS/SYSARCH → SWDD` cascade, so a
 project with another structure was described to the model wrongly and held to
 a cascade it did not have. `item get` also left a custom link field out of
-`all_linked_uids`.
+`all_linked_ids`.
 """
 
 from __future__ import annotations
@@ -92,4 +92,4 @@ def test_the_plan_prompt_describes_the_projects_links_and_chains(dhf: Path) -> N
 
 def test_a_custom_link_field_is_among_the_linked_ids(dhf: Path) -> None:
     result = CliRunner().invoke(main, ["--dhf", str(dhf), "item", "get", "HWR-001"])
-    assert json.loads(result.stdout)["all_linked_uids"] == ["SYS-001"]
+    assert json.loads(result.stdout)["all_linked_ids"] == ["SYS-001"]

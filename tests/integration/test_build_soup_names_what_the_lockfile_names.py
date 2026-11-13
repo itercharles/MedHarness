@@ -100,8 +100,8 @@ def test_a_package_at_two_versions_is_checked_at_both(project: Path) -> None:
     (project / "fe").mkdir()
     (project / "be" / "requirements.txt").write_text("requests==2.33.0\n")
     (project / "fe" / "requirements.txt").write_text("requests==2.19.0\n")
-    manifests = ["--manifest", str(project / "be" / "requirements.txt"),
-                 "--manifest", str(project / "fe" / "requirements.txt")]
+    manifests = ["--dependency-file", str(project / "be" / "requirements.txt"),
+                 "--dependency-file", str(project / "fe" / "requirements.txt")]
 
     result, answer = _soup(project, *manifests)
     assert result.exit_code == 1
@@ -109,7 +109,7 @@ def test_a_package_at_two_versions_is_checked_at_both(project: Path) -> None:
     assert answer["items_created"] == [] and answer["to_update"] == []
 
     (project / "fe" / "requirements.txt").write_text("requests==2.33.0\n")
-    _soup(project, "--manifest", str(project / "be" / "requirements.txt"))
+    _soup(project, "--dependency-file", str(project / "be" / "requirements.txt"))
     (project / "fe" / "requirements.txt").write_text("requests==2.19.0\n")
     from medharness.services.verify_soup import soup_gate
 

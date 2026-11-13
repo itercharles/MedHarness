@@ -77,9 +77,9 @@ class ItemStore:
     # ------------------------------------------------------------------
 
     def _enrich_item_dict(self, item) -> dict:
-        """Add medharness domain fields (type, all_linked_uids) to an item dict.
+        """Add medharness domain fields (type, all_linked_ids) to an item dict.
 
-        `all_linked_uids` is every ID the item links to, through the link fields its
+        `all_linked_ids` is every ID the item links to, through the link fields its
         doc type declares: a project's own relationship field is one of them.
         """
         d = item.model_dump(by_alias=True, exclude_none=True)
@@ -92,7 +92,7 @@ class ItemStore:
                 d[field] = [d[field]] if d[field] else []
             value = d.get(field)
             linked.update(v for v in value or [] if isinstance(v, str) and v)
-        d['all_linked_uids'] = sorted(linked)
+        d['all_linked_ids'] = sorted(linked)
         return d
 
     def get_item(self, uid: str) -> Optional[dict]:
@@ -283,7 +283,7 @@ class ItemStore:
 
         updated_data = existing.model_dump(exclude_unset=True)
         # Strip computed/non-model keys that should not be persisted
-        data = {k: v for k, v in data.items() if k != "all_linked_uids"}
+        data = {k: v for k, v in data.items() if k != "all_linked_ids"}
         updated_data.update(data)
         # Remove keys explicitly set to None (signal to clear the field)
         updated_data = {k: v for k, v in updated_data.items() if v is not None}

@@ -647,14 +647,14 @@ def sync_soup_items(dhf: Path, manifest_paths: list[Path]) -> dict:
             errors.append(f"Failed to update {item['id']}: {exc}")
 
     return {
-        "manifests_parsed": manifests_parsed,
+        "dependency_files": manifests_parsed,
         "packages_found": len(packages),
         "to_update": [
-            {"uid": e["item"]["id"], "name": e["pkg"]["name"],
+            {"id": e["item"]["id"], "name": e["pkg"]["name"],
              "old_version": e["old_version"], "new_version": e["pkg"]["version"]}
             for e in updated
         ],
-        "orphans": [{"uid": it["id"], "name": it.get("name", "")} for it in diff["orphans"]],
+        "orphans": [{"id": it["id"], "name": it.get("name", "")} for it in diff["orphans"]],
         "items_created": items_created,
         "errors": errors,
     }

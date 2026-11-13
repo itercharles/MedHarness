@@ -116,21 +116,21 @@ class CodeReport(StageReport):
 # ── build soup / build release / build approvals / build validation / init ────────────────────────────────────────
 
 class SoupDrift(Shape):
-    uid: str = Field(description="The SOUP item")
+    id: str = Field(description="The SOUP item")
     name: str = Field(description="The package")
     old_version: str = Field(description="What the register says")
     new_version: str = Field(description="What the manifest says")
 
 
 class SoupOrphan(Shape):
-    uid: str = Field(description="The SOUP item no manifest resolves")
+    id: str = Field(description="The SOUP item no dependency file resolves")
     name: str = Field(description="The package")
 
 
 class SoupReport(Shape):
     """`build soup`."""
 
-    manifests_parsed: list[str] = Field(description="The manifests it read")
+    dependency_files: list[str] = Field(description="The dependency files it read")
     packages_found: int = Field(description="Packages across them")
     to_update: list[SoupDrift] = Field(description="SOUP items whose version has drifted")
     orphans: list[SoupOrphan] = Field(description="SOUP items no manifest resolves")
@@ -143,7 +143,7 @@ class ReleaseReport(Shape):
 
     version: str = Field(description="The version released")
     cr_ids: list[str] = Field(description="The completed CRs it includes")
-    rel_uid: str | None = Field(description="The REL item recorded; null without `--write` or when a check failed")
+    rel_id: str | None = Field(description="The REL item recorded; null without `--write` or when a check failed")
     artifacts: list[str] = Field(description="Files written under `--out-dir`, relative to it")
     errors: list[str] = Field(description="What blocked the release; any exits 1, and a failing release still writes its evidence")
     warnings: list[str] = Field(description="What it noticed without blocking, such as a component with no purl")

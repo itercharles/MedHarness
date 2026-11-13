@@ -118,7 +118,7 @@ def cr_context(adapter: Any, cr_id: str) -> dict:
         scope = "affected"
         chosen = [
             {**{f: it.get(f, "") for f in _FULL_ITEM_FIELDS},
-             "tracelinks": it.get("all_linked_uids", [])}
+             "tracelinks": it.get("all_linked_ids", [])}
             for it in items if it["id"] in affected
         ]
         modules = [
@@ -131,7 +131,7 @@ def cr_context(adapter: Any, cr_id: str) -> dict:
         scope = "whole_dhf"
         chosen = [
             {"id": it["id"], "type": it.get("type", ""), "title": it.get("title", ""),
-             "status": it.get("status", ""), "tracelinks": it.get("all_linked_uids", [])}
+             "status": it.get("status", ""), "tracelinks": it.get("all_linked_ids", [])}
             for it in items
         ]
 

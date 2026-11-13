@@ -1,7 +1,7 @@
 id: SRS-050
 title: build release refuses a release whose software BOM cannot be built
 risk: high
-content: '`build release` shall fail when a dependency manifest given with --manifest
+content: '`build release` shall fail when a dependency file given with --dependency-file
   cannot be read or is not a supported format, and shall list the SOUP items and the
   manifest packages in the BOM, so that an incomplete BOM does not look like a successful
   one.'

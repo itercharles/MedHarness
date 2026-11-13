@@ -205,10 +205,10 @@ def register(main):
             raise click.exceptions.Exit(1)
 
     @verify.command("soup")
-    @click.option("--manifest", "manifest_paths", multiple=True,
+    @click.option("--dependency-file", "manifest_paths", multiple=True,
                   type=click.Path(exists=True, dir_okay=False, path_type=Path),
                   metavar="PATH",
-                  help="Dependency manifest to compare the register against (repeatable). "
+                  help="Dependency file to compare the register against (repeatable). "
                        "Auto-discovers when omitted.")
     @click.option("--strict", is_flag=True, default=False,
                   help="Make an undocumented or misversioned component fail the gate. "

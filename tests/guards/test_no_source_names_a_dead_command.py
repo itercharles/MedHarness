@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 #: Options that take a value, so the token after them is not a subcommand.
 VALUE_FLAGS = {"--dhf", "--cr", "--type", "--version", "--out-dir", "--junit",
-               "--manifest", "--since-ref", "--data", "--stage", "--pr", "--author"}
+               "--dependency-file", "--since-ref", "--data", "--stage", "--pr", "--author"}
 
 
 def _quoted_invocations() -> list[tuple[str, str, tuple[str, ...]]]:

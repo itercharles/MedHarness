@@ -6,8 +6,8 @@ content: '`build release` shall record the REL item and write `releases/<version
   and `changes.md` only when --write is given and every check passed, and shall record
   the release as a draft, so that a dry run changes nothing in the DHF and a record
   exists only for a release that passed.'
-verification_criteria: With --write and no errors, `rel_uid` is set, the REL item
-  has status draft, and the manifest and change report exist; the first release lists
+verification_criteria: With --write and no errors, `rel_id` is set, the REL item has
+  status draft, and the manifest and change report exist; the first release lists
   every item as added, a later one lists, per type, what was added, modified or removed
   since the previous release, with the CR that lists each. Without --write, a dry
   run writes only to --out-dir and the DHF is byte-for-byte as it was.

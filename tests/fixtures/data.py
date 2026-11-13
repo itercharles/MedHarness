@@ -61,7 +61,7 @@ def build_test_adapter():
 
     adapter = StubDHFAdapter()
     for item in get_test_dataset():
-        _add_all_linked_uids(item)
+        _add_all_linked_ids(item)
         adapter._items[item['id']] = item
 
     # Standard test document for document_content checks
@@ -72,14 +72,14 @@ def build_test_adapter():
     return adapter
 
 
-def _add_all_linked_uids(item: dict) -> None:
+def _add_all_linked_ids(item: dict) -> None:
     _LINK_FIELDS = ("derives_from", "implements", "mitigates", "satisfies", "guided_by", "informs", "design", "verifies", "validates")
     linked = []
     for field in _LINK_FIELDS:
         vals = item.get(field)
         if isinstance(vals, list):
             linked.extend(vals)
-    item["all_linked_uids"] = linked
+    item["all_linked_ids"] = linked
 
 def populate_governance(governance_dir: Path) -> None:
     """Create governance directory with IEC 62304 and ISO 14971 test policies."""

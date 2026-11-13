@@ -123,7 +123,7 @@ A link whose target does not exist (a typo, a deleted item) always fails; an ite
 | `item transition ID` | `item_id`, `current_status` and `transitions` — where it can go, and what blocks each move |
 | `item approve` | the approval record written, with its path |
 
-An item is its file's fields plus `type` (the item type's code), `file_path`, and `all_linked_uids` — every ID it links to, so a caller need not know which fields are links.
+An item is its file's fields plus `type` (the item type's code), `file_path`, and `all_linked_ids` — every ID it links to, so a caller need not know which fields are links.
 
 `create` and `update` validate against the item type's schema **before writing**: an unknown field or a missing required field exits `1` with nothing on stdout and the reason on stderr, and no file is written. `update` changes only the fields it is given, and rewrites only those whose value changed, so a review shows the field that changed and nothing else.
 
@@ -243,7 +243,7 @@ An item is its file's fields plus `type` (the item type's code), `file_path`, an
 
 | Field | Type | Meaning |
 |---|---|---|
-| `manifests_parsed` | list of strings | The manifests it read |
+| `dependency_files` | list of strings | The dependency files it read |
 | `packages_found` | integer | Packages across them |
 | `to_update` | list of `SoupDrift` | SOUP items whose version has drifted |
 | `orphans` | list of `SoupOrphan` | SOUP items no manifest resolves |
@@ -254,7 +254,7 @@ An item is its file's fields plus `type` (the item type's code), `file_path`, an
 
 | Field | Type | Meaning |
 |---|---|---|
-| `uid` | string | The SOUP item |
+| `id` | string | The SOUP item |
 | `name` | string | The package |
 | `old_version` | string | What the register says |
 | `new_version` | string | What the manifest says |
@@ -263,7 +263,7 @@ An item is its file's fields plus `type` (the item type's code), `file_path`, an
 
 | Field | Type | Meaning |
 |---|---|---|
-| `uid` | string | The SOUP item no manifest resolves |
+| `id` | string | The SOUP item no dependency file resolves |
 | `name` | string | The package |
 
 #### `build release`
@@ -272,7 +272,7 @@ An item is its file's fields plus `type` (the item type's code), `file_path`, an
 |---|---|---|
 | `version` | string | The version released |
 | `cr_ids` | list of strings | The completed CRs it includes |
-| `rel_uid` | string or null | The REL item recorded; null without `--write` or when a check failed |
+| `rel_id` | string or null | The REL item recorded; null without `--write` or when a check failed |
 | `artifacts` | list of strings | Files written under `--out-dir`, relative to it |
 | `errors` | list of strings | What blocked the release; any exits 1, and a failing release still writes its evidence |
 | `warnings` | list of strings | What it noticed without blocking, such as a component with no purl |

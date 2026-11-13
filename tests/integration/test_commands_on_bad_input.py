@@ -176,11 +176,11 @@ class TestBuildArguments:
         before = {p: p.read_bytes() for p in (project / "DHF").rglob("*.yaml")}
         result = _run(project, "build", "release", "--version", "1.0.0", "--out-dir", str(project / "r"),
                       "--junit", str(junit))
-        assert result.exit_code == 0 and ReleaseReport.model_validate_json(result.stdout).rel_uid is None
+        assert result.exit_code == 0 and ReleaseReport.model_validate_json(result.stdout).rel_id is None
         assert {p: p.read_bytes() for p in (project / "DHF").rglob("*.yaml")} == before
 
     def test_a_manifest_that_does_not_exist_is_a_usage_error(self, project: Path) -> None:
-        result = _run(project, "build", "soup", "--manifest", str(project / "no-such.txt"))
+        result = _run(project, "build", "soup", "--dependency-file", str(project / "no-such.txt"))
         assert result.exit_code == 2
 
     @pytest.mark.parametrize("stage", ["plan", "code"])
