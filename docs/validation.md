@@ -3,7 +3,7 @@
 > **Stability:** Draft
 > **Last reviewed:** 2026-10-27
 
-What MedHarness is trusted to do, how much a wrong answer matters for each command, and the requirements and tests that back the commands rated high and medium. It is the start of [iteration 4](charter.md#iterations) of the charter.
+What MedHarness is trusted to do, how much a wrong answer matters for each command, and the requirements and tests that back the commands rated high and medium. It is the start of [iteration 4](reviews/charter-iterations.md#iteration-4-inventory-2026-10-25) of the charter.
 
 ISO 13485 §4.1.6 asks a manufacturer to validate software used in its quality system in proportion to the risk, and IEC/TR 80002-2 describes how: state what the tool must do, rate the risk of it doing that wrongly, and keep evidence that it does it. This page does the first two for MedHarness; the repository's own DHF holds the requirements and the tests are the evidence.
 
