@@ -5,7 +5,7 @@
 
 ## Context
 
-Step 4 of [iteration 4](../charter.md#iterations). A manufacturer that relies on
+Step 4 of [iteration 4](../reviews/charter-iterations.md#iteration-4-inventory-2026-10-25). A manufacturer that relies on
 MedHarness in its quality system validates it for that use (ISO 13485 §4.1.6), and
 IEC/TR 80002-2 expects part of that evidence to come from the environment the tool
 runs in, not only from the vendor's. MedHarness now has the vendor's half:

@@ -11,6 +11,12 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.80.1] — 2026-11-13
+
+### Changed
+- The README now says what MedHarness is for before it says how it works: the IEC 62304 evidence problem, an example of what `verify impact` stops, what a release produces, and who it is and is not for. It states the Python version it needs.
+- The iteration log moved from `docs/charter.md` to `docs/reviews/charter-iterations.md`, so the charter holds the problem, the promises and the non-goals.
+
 ## [0.80.0] — 2026-11-13
 
 Two names that meant more than one thing, made one thing each. Breaking.

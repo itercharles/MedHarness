@@ -1,0 +1,210 @@
+# Charter iterations
+
+The record of how the [charter](../charter.md) was applied: each iteration answered one
+question, in the order below, and left its result here. It is history, not the current
+state; the commands it names may since have been folded or removed (see the changelog).
+
+## The questions
+
+Each iteration answers one question, in this order:
+
+1. **Inventory.** Map every existing capability to the promises above; cut or
+   freeze what serves none.
+2. **Completeness of impact.** Design the seeded-omission experiment, measure
+   where things stand, then improve.
+3. **Approval and accountability.** How a person's approval becomes a compliant
+   review record.
+4. **Tool validation.** MedHarness's own validation evidence.
+
+## Iteration 1: inventory (2026-10-21)
+
+Every command and gate, against the promises (● serves it, ○ serves it indirectly):
+
+| Capability | 1 | 2 | 3 | Verdict |
+|---|---|---|---|---|
+| `item` (CRUD, `transition`) | ● | | | Keep: foundation |
+| `verify dhf` | ● | | | Keep |
+| `verify changes` (folded into `verify impact` in 0.74.0) | ● | | ○ | Keep |
+| `verify tests` | ● | ● | | Keep |
+| `verify completion` (split in 0.75.0 into `verify tests --cr` and a rule of `verify dhf`) | ● | ● | | Keep |
+| `build release` | | ● | | Keep |
+| `build soup`, and `verify soup` drift | ● | ● | | Keep |
+| `verify impact` | | | ● | Keep: where iteration 2 invests |
+| Heuristic warnings (vague criteria, near duplicates, large edits, test points left unchanged) | | | ○ | Keep as warnings; add no more |
+| `build plan`, `build code` with `--prompt` | | ○ | ○ | Keep |
+| `init` | | | | Keep: adoption needs it |
+
+What serves none of the promises:
+
+- **The unattended CI runner** — `--pr` write-back and comments, session resume, the
+  non-Claude model providers, and model-on-model design and code review. **Frozen**: it
+  keeps working, gains no features. `--prompt` with the user's own agent covers the same
+  ground, and a model reviewing a model is not a check made by code.
+- **`verify soup` vulnerability scanning** (OSV) — cybersecurity evidence, outside the
+  62304 and change-related 14971 scope. **Frozen**; extending it starts with this charter.
+- **The `triage_result` gate** — it checks only that the model wrote `approved`, about
+  its own work. **To be removed**, or folded into `impact_analysis`. Removed in #454.
+
+Gaps in promise 3, the input to iteration 2:
+
+- **G1. Code changes do not reach the impact check.** It starts from the DHF items a
+  branch changed; MODULE items name no code paths, and `verify impact --code-path` only
+  asks that some file changed. A CR that changes dose calculation while declaring an
+  unrelated SRS passes every gate. Closed in #453.
+- **G2. A new hazard has no way in.** Risk closure follows existing RCM links; a hazard
+  linked to nothing is invisible. Code cannot find it, so it must be challenged: the
+  `risk` dimension of `impact_analysis` has to carry evidence.
+- **G3. Nothing is measured.** There is no seeded-omission fixture, so the share of
+  omissions the gates stop is unknown. Closed in #452.
+
+Iteration 2 builds G3 first, measures, then closes G1 and shows the same fixture catch it.
+
+## Iteration 2: baseline (2026-10-21)
+
+`tests/integration/test_seeded_omissions_are_stopped.py` closes G3. An honest change
+request passes all five pre-merge gates; each of eleven cases leaves one thing out of it.
+A stopped case must be stopped by the gate whose job it is. Misses are strict xfails
+tagged with their gap, so the test summary is the catch rate.
+
+**Today the gates stop 6 of 11.** DHF-level omissions: 6 of 7. Code-level: 0 of 4.
+
+| Omission | Result |
+|---|---|
+| Dependent left unreviewed | Stopped by `verify impact` |
+| Risk control left out | Stopped by `verify impact` |
+| Undeclared item change | Stopped by `verify impact` |
+| Declared item not changed | Stopped by `verify impact` |
+| Parent left unreviewed | Stopped by `verify impact` |
+| Changed requirement lost its test | Stopped by `verify tests` |
+| Test point left unchanged | Missed: a warning only |
+| Code changed without a requirement | Missed: G1 |
+| Code changed outside the declared scope | Missed: G1 |
+| New hazard not recorded | Missed: G2 |
+| Verifying test weakened | Missed: G4 |
+
+A change request that changes dose calculation and names no item passes every gate,
+`verify tests --cr` included.
+
+The baseline found one more gap:
+
+- **G4. A passing test is taken at its word.** A test rewritten to `assert True` still
+  counts as verification.
+
+Next: close G1 by mapping code paths to MODULE items, so a changed file reaches the
+items above it. Done when both G1 cases are stopped and the honest change still passes.
+
+## Iteration 2: result (2026-10-21)
+
+**The gates stop 9 of 12.** DHF-level omissions: 6 of 7. Code-level: 2 of 4. Self-exemption: 1 of 1.
+
+- **G1 closed (#453).** A MODULE lists the code `paths` it owns. `verify impact` follows each
+  changed file to its module's SWDD items and the requirements they implement, and each
+  must be changed or reviewed. Once any module declares `paths`, a changed file no module
+  owns fails too, unless `unowned_paths` in `global.yaml` exempts it (docs, CI, lockfiles
+  by default). Both G1 cases are stopped.
+- **The `triage_result` gate removed (#454).** The honest change passes every gate without
+  a triage record. The field remains for a rejection.
+- **The rejected-CR loophole closed (#455).** Writing `rejected` on a CR used to exempt
+  it from the code and `impact_analysis` checks, and any agent can write that field. A
+  rejected CR is now skipped only while its branch changes nothing but the CR. A new case,
+  a CR that rejects itself while changing code it never accounts for, passed every gate
+  before the fix and is now stopped.
+
+| Omission | Result |
+|---|---|
+| Code changed without a requirement | Stopped by `verify impact` (was missed: G1) |
+| Code changed outside the declared scope | Stopped by `verify impact` (was missed: G1) |
+| CR rejects itself to skip the checks | Stopped by `verify impact` (new case) |
+| Test point left unchanged | Missed: a warning only |
+| New hazard not recorded | Missed: G2 |
+| Verifying test weakened | Missed: G4 |
+
+The six cases stopped at the baseline are still stopped.
+
+Still open: G2 (a new hazard has no way in), G4 (a passing test is taken at its word),
+and the test point that only warns.
+
+Next: iteration 3, approval and accountability.
+
+## Iteration 3: result (2026-10-25)
+
+[ADR-004](../adr/ADR-004-signed-approvals.md) settles approval and accountability. It went
+through three designs; the one that shipped in 0.70.0 (#457, #459, #460):
+
+- **During development, approval is pull-request review** under the team's rules, the
+  change control board's included. No gate asks for a signature.
+- **At release, each document is signed by the role that owns it.** `build release
+  --write` writes a manifest of each document's item hashes and a change report;
+  `item approve --release` signs; `verify approval --release` checks; `build approvals`
+  renders the approval sheet. Signatures are SSH signatures in an append-only log in the
+  DHF, checked against an approvers list that guards itself.
+- **ContourLab adopted it** (ContourLab #233, #234). Its CR agent jobs no longer hold the
+  owner's token: each pushes through a separate job that has no agent (ContourLab #235).
+
+Still open: proving that a hardware key's holder was present, revoking an approver's key,
+and whether the FDA's Part 11 is in scope.
+
+## Iteration 4: inventory (2026-10-25)
+
+What a quality system needs before it relies on a tool (ISO 13485 §4.1.6, IEC/TR 80002-2),
+against what MedHarness has:
+
+| Element | Today | Verdict |
+|---|---|---|
+| Intended use | The charter, the README and ai-security.md: the AI stages propose; the deterministic commands are the ones to rely on | Present |
+| Risk of the tool failing | None. A gate that wrongly passes (`verify tests --cr`, `verify approval --release`, `build release`) matters far more than `item list` going wrong, and nothing says so | Missing |
+| Requirements | `interface.md` is a tested contract of commands, options and answers, but it says what a gate prints, not what it must stop | Partial |
+| Verification | About 2,100 tests (unit, integration, interface, guards) and the seeded-omission fixture, but none traces to a requirement, and coverage is not measured | Partial |
+| Configuration | Semantic versions, the changelog, `uv.lock` and the release preflight. The published package does not pin its dependencies, so an install can differ from what was tested | Gap |
+| Release record | The changelog and trusted publishing to PyPI. The release workflow runs no tests, the CI runs that did are not kept, and no release lists its known anomalies | Missing |
+| Validation where it is used | None. The tests do not ship, so a user cannot show that their install works | Missing |
+| Revalidation on upgrade | The changelog's categories, but not which gates a change touches | Partial |
+
+External tools are part of the configuration and are not listed: OpenSSH (signing),
+git, WeasyPrint and its native libraries (PDF), osv.dev (vulnerability scan), and `gh` and
+the `claude` CLI for the frozen CI runner.
+
+### Approach: MedHarness keeps its own DHF
+
+A traceability tool with no traceability of its own is the gap that matters. MedHarness
+will manage itself with itself, starting from the commands that are relied on:
+
+- **Requirements of its gates as DHF items**, each with what the gate must pass and must
+  stop, and a risk rating for a wrong pass.
+- **Its tests trace to them** with `@links` and test points, and `verify tests` holds every
+  requirement to a passing test. The seeded-omission fixture verifies that the gates stop
+  what they must.
+- **Each release carries its own evidence.** The release runs the tests, and `build release`
+  produces MedHarness's traceability, test evidence and known anomalies. The release also
+  carries the dependency versions it was tested with.
+- **A user can validate their install.** One command runs the validation tests against the
+  installed version, in the user's environment, and writes a report they can file.
+
+Order:
+
+1. Rate each command's risk of a wrong pass, which sets how much evidence each needs.
+2. Give the high-risk gates requirements and trace their tests.
+3. Make a release carry its evidence and its tested dependency versions.
+4. The user's validation command.
+
+The AI stages stay out of scope: they are not relied on as a validated transformation.
+
+## Iteration 4: validation where it is used (2026-10-27)
+
+[ADR-005](../adr/ADR-005-installation-validation.md) is accepted, and step 4 has begun:
+
+- **One command, `medharness build validation`,** runs a validation set shipped in the wheel
+  against a scratch project in a temporary directory and writes a report the user files: the
+  installed files checked against the release, each dependency beside the version the release
+  was tested with, the environment, and a result for every test point of the high-risk
+  requirements. It never reads the user's DHF and never reaches the network.
+- **The release carries what the report compares against.** `release.json` in the wheel holds
+  the version, the commit, the evidence file names, the tested dependency versions and the
+  requirement text.
+- **The set exercises all 170 high-risk test points,** each through the CLI, the seeded-omission
+  project among them. For 48 of those points the suite had checked the service below the CLI
+  only; each now has a case that runs the command. Every case is checked against a gate made to
+  always pass and one made to always refuse, and fails under one of the two.
+
+The inventory's "Validation where it is used" row moves from Missing to Present. A user's
+result is `passed` on a wheel install of a release, with `git` and `ssh-keygen` present.
