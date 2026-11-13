@@ -147,7 +147,7 @@ class TestOutputContract:
         assert r.returncode == 0
         item = json.loads(r.stdout)
         assert "id" in item
-        assert "all_linked_uids" in item
+        assert "all_linked_ids" in item
         if r.stderr.strip():
             try:
                 json.loads(r.stderr)

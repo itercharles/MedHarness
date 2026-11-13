@@ -36,8 +36,8 @@ def _release(root: Path, *args: str, version: str = "1.0.0", results: Path | Non
 
 def _refused(root: Path, *needles: str, args: tuple[str, ...] = (), results: Path | None = None) -> dict:
     code, report, _ = _release(root, *args, results=results)
-    check(code == 1 and report["errors"] and report["rel_uid"] is None,
-          f"exited {code}, rel_uid {report.get('rel_uid')}: {report.get('errors')}")
+    check(code == 1 and report["errors"] and report["rel_id"] is None,
+          f"exited {code}, rel_id {report.get('rel_id')}: {report.get('errors')}")
     for needle in needles:
         check(any(needle in e for e in report["errors"]), f"no error says {needle!r}: {report['errors']}")
     return report
@@ -145,7 +145,7 @@ def assessed_defect_is_carried_as_an_anomaly(root: Path) -> None:
     edit(root, "DEF-001", status="open", release_rationale="Cosmetic; no effect on the dose.")
     report = _released(root, "--write")
     baseline = json.loads((root / "out" / "1.0.0" / "release-baseline.json").read_text(encoding="utf-8"))
-    rel = yaml.safe_load(item_path(root, report["rel_uid"]).read_text(encoding="utf-8"))
+    rel = yaml.safe_load(item_path(root, report["rel_id"]).read_text(encoding="utf-8"))
     for where, anomalies in (("baseline", baseline["known_anomalies"]), ("REL item", rel["known_anomalies"])):
         check([(a["defect"], a["rationale"]) for a in anomalies] == [("DEF-001", "Cosmetic; no effect on the dose.")],
               f"the {where} carries {anomalies}")
@@ -172,7 +172,7 @@ def junit_is_required(root: Path) -> None:
 
 def written_release_is_a_draft_with_its_records(root: Path) -> None:
     report = _released(root, "--write")
-    rel = yaml.safe_load(item_path(root, report["rel_uid"]).read_text(encoding="utf-8"))
+    rel = yaml.safe_load(item_path(root, report["rel_id"]).read_text(encoding="utf-8"))
     check(rel["status"] == "draft", f"the REL is {rel['status']!r}, not draft")
     for name in ("manifest.yaml", "changes.md"):
         check((root / "DHF" / "releases" / "1.0.0" / name).is_file(), f"{name} was not written")
@@ -300,21 +300,21 @@ def manifest_without_approvers(root: Path) -> None:
 
 def unreadable_manifest_is_named(root: Path) -> None:
     (root / "deps.lock").write_text("not a manifest\n", encoding="utf-8")
-    _refused(root, f"Unsupported manifest format for BOM: {root / 'deps.lock'}", args=("--manifest", str(root / "deps.lock")))
+    _refused(root, f"Unsupported manifest format for BOM: {root / 'deps.lock'}", args=("--dependency-file", str(root / "deps.lock")))
 
 
 def malformed_package_json_is_a_parse_failure(root: Path) -> None:
     (root / "package.json").write_text("{not json", encoding="utf-8")
-    report = _refused(root, f"Failed to parse BOM manifest {root / 'package.json'}", args=("--manifest", str(root / "package.json")))
+    report = _refused(root, f"Failed to parse BOM manifest {root / 'package.json'}", args=("--dependency-file", str(root / "package.json")))
     check(not any("Unsupported" in e for e in report["errors"]), f"reported as unsupported: {report['errors']}")
 
 
 def bom_lists_soup_and_packages(root: Path) -> None:
     (root / "package.json").write_text(json.dumps({"name": "app", "version": "1.0.0", "dependencies": {"left-pad": "1.3.0"}}),
                                        encoding="utf-8")
-    _released(root, "--manifest", str(root / "package.json"))
+    _released(root, "--dependency-file", str(root / "package.json"))
     bom = json.loads((root / "out" / "1.0.0" / "software-bom.json").read_text(encoding="utf-8"))
-    check([s["uid"] for s in bom["dhf_soup"]] == ["SOUP-001"], f"dhf_soup: {bom['dhf_soup']}")
+    check([s["id"] for s in bom["dhf_soup"]] == ["SOUP-001"], f"dhf_soup: {bom['dhf_soup']}")
     check([(p["name"], p["version"]) for p in bom["manifest_packages"]] == [("left-pad", "1.3.0")],
           f"manifest_packages: {bom['manifest_packages']}")
 

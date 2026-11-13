@@ -66,7 +66,7 @@ def test_the_release_is_recorded_as_a_draft_for_the_signatures_to_cover(tmp_path
     report = json.loads(project.run("build", "release", "--version", "1.0.1", "--out-dir", str(project.root / "rel" / "1.0.1"),
                                     "--junit", str(project.junit), "--write").stdout.splitlines()[0])
 
-    assert yaml.safe_load(project.item_file(report["rel_uid"]).read_text())["status"] == "draft"
+    assert yaml.safe_load(project.item_file(report["rel_id"]).read_text())["status"] == "draft"
 
 
 @pytest.mark.dhf_links("SRS-048")

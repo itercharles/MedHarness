@@ -20,8 +20,8 @@ CONFIG = ProjectConfig(
     required_traceability=[],
 )
 CYCLE = [
-    {"id": "SYS-001", "derives_from": ["SRS-001"], "all_linked_uids": ["SRS-001"]},
-    {"id": "SRS-001", "derives_from": ["SYS-001"], "all_linked_uids": ["SYS-001"]},
+    {"id": "SYS-001", "derives_from": ["SRS-001"], "all_linked_ids": ["SRS-001"]},
+    {"id": "SRS-001", "derives_from": ["SYS-001"], "all_linked_ids": ["SYS-001"]},
 ]
 
 

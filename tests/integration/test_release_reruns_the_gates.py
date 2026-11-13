@@ -59,7 +59,7 @@ def test_a_cr_edited_to_completed_by_hand_blocks_the_release(tmp_path: Path) -> 
     result, report = _release(dhf, "--write")
     assert result.exit_code == 1 and report.errors
     assert any(e.startswith("CR-001:") for e in report.errors), report.errors
-    assert report.rel_uid is None
+    assert report.rel_id is None
     assert not list((dhf / "items").rglob("REL-002.yaml")), "a REL was recorded for a failed release"
 
 
@@ -111,7 +111,7 @@ def test_a_coverage_gap_in_the_chain_blocks_the_release(tmp_path: Path) -> None:
 
     result, report = _release(dhf, "--write", junit=junit)
 
-    assert result.exit_code == 1 and report.rel_uid is None
+    assert result.exit_code == 1 and report.rel_id is None
     assert any(e.startswith("DHF:") and "SRS->SWDD: 1 uncovered" in e for e in report.errors), report.errors
 
 
@@ -121,7 +121,7 @@ def test_a_failing_release_still_writes_the_evidence_to_the_out_dir(tmp_path: Pa
     dhf = _project(tmp_path)            # CR-001 is completed by hand and fails its closure
     result, report = _release(dhf, "--write")
 
-    assert result.exit_code == 1 and report.rel_uid is None
+    assert result.exit_code == 1 and report.rel_id is None
     assert "evidence-summary.json" in report.artifacts, report.artifacts
     assert any(a.startswith("specifications/SRS_Specification_") for a in report.artifacts), report.artifacts
     assert (tmp_path / "rel" / "evidence-manifest.json").is_file()

@@ -120,7 +120,7 @@ class TestGate:
 
         assert result["errors"]
         assert any("§9.7" in e for e in result["errors"])
-        assert result["rel_uid"] is None
+        assert result["rel_id"] is None
         assert releases() == before, "--write recorded a release that failed its own gate"
 
     def test_assessed_defect_passes_and_is_recorded(self, dhf: Path, tmp_path: Path) -> None:
@@ -196,12 +196,11 @@ class TestBaselineRunsAtAll:
         result = _baseline(dhf, tmp_path / "out")
         assert result["errors"] == []
 
-    def test_bom_artifact_keeps_its_uid_key(self, dhf: Path, tmp_path: Path) -> None:
-        """Consumers read "uid" from the artifact; only the lookup was wrong."""
+    def test_bom_artifact_names_a_soup_item_by_its_id(self, dhf: Path, tmp_path: Path) -> None:
         out = tmp_path / "out"
         _baseline(dhf, out)
         bom = json.loads((out / "software-bom.json").read_text())
-        assert bom["dhf_soup"][0]["uid"].startswith("SOUP-")
+        assert bom["dhf_soup"][0]["id"].startswith("SOUP-")
 
 
 class TestARelIsRecordedOnlyWhenEverythingPassed:
@@ -239,7 +238,7 @@ class TestARelIsRecordedOnlyWhenEverythingPassed:
                                junit_paths=[verify_the_starter(dhf, tmp_path / "tr")])
 
         assert any(e.startswith("DHF:") and "RISK-404" in e for e in result["errors"]), result["errors"]
-        assert result["rel_uid"] is None
+        assert result["rel_id"] is None
         assert self._releases(dhf) == before, "--write recorded a release whose DHF check failed"
 
     def test_a_release_that_passed_is_recorded(self, tmp_path: Path) -> None:
@@ -253,4 +252,4 @@ class TestARelIsRecordedOnlyWhenEverythingPassed:
                                junit_paths=[verify_the_starter(dhf, tmp_path / "tr")])
 
         assert result["errors"] == [], result["errors"]
-        assert result["rel_uid"] and result["rel_uid"] not in before
+        assert result["rel_id"] and result["rel_id"] not in before

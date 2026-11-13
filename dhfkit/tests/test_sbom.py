@@ -241,10 +241,8 @@ class TestReleaseBaselineEmitsAnSbom:
 
         legacy = json.loads((out / "software-bom.json").read_text())
         assert {"dhf_soup", "manifest_packages"} <= set(legacy)
-        # "uid", not "id" — the artifact key predates the item field and
-        # existing consumers read it.
-        assert legacy["dhf_soup"][0]["uid"] == "SOUP-001"
-        assert "id" not in legacy["dhf_soup"][0]
+        assert legacy["dhf_soup"][0]["id"] == "SOUP-001"
+        assert "uid" not in legacy["dhf_soup"][0]
 
     def test_an_unreadable_project_name_does_not_fail_the_release(
         self, tmp_path: Path

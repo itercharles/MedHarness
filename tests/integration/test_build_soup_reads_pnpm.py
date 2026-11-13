@@ -54,7 +54,7 @@ def test_a_pnpm_lockfile_is_found_without_any_option(project: Path) -> None:
 
     assert result.exit_code == 0, answer["errors"]
     assert answer["packages_found"] == 2, "the transitive packages are not registered"
-    assert [Path(m).name for m in answer["manifests_parsed"]] == ["pnpm-lock.yaml"]
+    assert [Path(m).name for m in answer["dependency_files"]] == ["pnpm-lock.yaml"]
 
 
 def test_each_direct_dependency_becomes_an_npm_soup_item(project: Path) -> None:
@@ -76,7 +76,7 @@ def test_each_direct_dependency_becomes_an_npm_soup_item(project: Path) -> None:
 def test_a_lockfile_pnpm_no_longer_writes_is_an_error_not_a_guess(project: Path) -> None:
     (project / "pnpm-lock.yaml").write_text("lockfileVersion: 5.4\ndependencies:\n  lodash: 4.17.21\n")
 
-    result, answer = _soup(project, "--manifest", str(project / "pnpm-lock.yaml"))
+    result, answer = _soup(project, "--dependency-file", str(project / "pnpm-lock.yaml"))
 
     assert result.exit_code == 1 and answer["errors"]
     assert any("lockfileVersion 5.4" in e for e in answer["errors"]), answer["errors"]
@@ -88,7 +88,7 @@ def test_a_lockfile_pnpm_no_longer_writes_is_an_error_not_a_guess(project: Path)
 def test_a_manifest_that_was_dropped_is_reported_as_unsupported(project: Path, name: str) -> None:
     (project / name).write_text("")
 
-    result, answer = _soup(project, "--manifest", str(project / name))
+    result, answer = _soup(project, "--dependency-file", str(project / name))
 
     assert result.exit_code == 1
     assert any(f"Unsupported manifest format: {name}" in e for e in answer["errors"]), answer["errors"]
@@ -99,4 +99,4 @@ def test_a_dropped_manifest_is_no_longer_discovered(project: Path) -> None:
 
     _, answer = _soup(project)
 
-    assert answer["packages_found"] == 0 and answer["manifests_parsed"] == []
+    assert answer["packages_found"] == 0 and answer["dependency_files"] == []

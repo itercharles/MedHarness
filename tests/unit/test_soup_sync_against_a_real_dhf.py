@@ -34,7 +34,7 @@ def project(tmp_path: Path) -> Path:
 def _sync(project: Path, *extra: str) -> dict:
     r = CliRunner().invoke(mh_main, [
         "--dhf", str(project / "DHF"), "build", "soup",
-        "--manifest", str(project / "requirements.txt"), *extra,
+        "--dependency-file", str(project / "requirements.txt"), *extra,
     ])
     assert "Traceback" not in (r.stderr or ""), r.stderr[-500:]
     assert r.exit_code == 0, (r.exit_code, r.output, r.stderr)
@@ -74,7 +74,7 @@ class TestItRunsAtAll:
         (project / "requirements.txt").write_text("flask==3.1.0\nnumpy==1.26.0\n")
         result = _sync(project)
         flask = next(it for it in open_store(project / "DHF").list_items("SOUP") if it["name"] == "flask")
-        assert [e["uid"] for e in result["to_update"]] == [flask["id"]]
+        assert [e["id"] for e in result["to_update"]] == [flask["id"]]
         assert flask["version"] == "3.1.0"
 
     @pytest.mark.dhf_links("SRS-068")
@@ -84,5 +84,4 @@ class TestItRunsAtAll:
         (project / "requirements.txt").write_text("flask==3.0.0\n")
         result = _sync(project)
         assert [o["name"] for o in result["orphans"]] == ["numpy"]
-        # The artifact key stays "uid" — existing consumers read it.
-        assert "uid" in result["orphans"][0]
+        assert "id" in result["orphans"][0]

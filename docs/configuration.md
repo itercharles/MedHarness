@@ -80,7 +80,7 @@ typo never reaches the DHF; `affected_items` is the exception, because it also n
 items the branch deleted.
 
 Everything reads this: `verify dhf` (dangling and wrong-type links, required links,
-coverage), `item get` (`all_linked_uids`), the release's traceability reports (one per
+coverage), `item get` (`all_linked_ids`), the release's traceability reports (one per
 matrix), and `build plan`, whose prompt describes your link fields and chains and
 whose check expects an item it creates to get a child next along a chain. Only
 what is configured is checked: a type with no `target_types` accepts any target.

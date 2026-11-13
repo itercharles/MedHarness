@@ -197,8 +197,8 @@ class TestValidateGenerateDhfCascade:
         errors = _validate_cascade_completeness([], by_id, _config())
         assert errors == []
 
-    def test_cascade_uses_link_fields_not_all_linked_uids(self):
-        """Cascade check must work from raw link fields, not the enriched all_linked_uids."""
+    def test_cascade_uses_link_fields_not_all_linked_ids(self):
+        """Cascade check must work from raw link fields, not the enriched all_linked_ids."""
         from medharness.services.design_validation import _validate_cascade_completeness
 
         by_id = {

@@ -206,9 +206,9 @@ def register(main):
     @click.option("--cr", "cr_ids", multiple=True, metavar="CR_ID",
                   help="A CR to include (repeatable). Default: every completed CR "
                        "not yet in a release.")
-    @click.option("--manifest", "manifest_paths", multiple=True,
+    @click.option("--dependency-file", "manifest_paths", multiple=True,
                   type=click.Path(exists=True, dir_okay=False, path_type=Path), metavar="PATH",
-                  help="Dependency manifest whose packages the BOM lists beside the "
+                  help="Dependency file whose packages the BOM lists beside the "
                        "SOUP register (repeatable).")
     @junit_option("JUnit XML from the tests of this release: a file, or a directory searched "
                   "for *.xml (repeatable). Every requirement must be verified by it.", required=True)
@@ -250,7 +250,7 @@ def register(main):
             click.echo(f"Release {version} is not ready: {len(result['errors'])} "
                        f"problem(s).{note}", err=True)
             sys.exit(1)
-        rel_note = f", recorded as {result['rel_uid']}" if result["rel_uid"] else " (dry run)"
+        rel_note = f", recorded as {result['rel_id']}" if result["rel_id"] else " (dry run)"
         click.echo(
             f"OK build release {version}{rel_note}: {len(result['cr_ids'])} CR(s), "
             f"{len(result['artifacts'])} file(s) in {out_dir}.",
@@ -324,9 +324,9 @@ def register(main):
             sys.exit(1)
 
     @build.command("soup")
-    @click.option("--manifest", "manifest_paths", multiple=True,
+    @click.option("--dependency-file", "manifest_paths", multiple=True,
                   type=click.Path(exists=True, dir_okay=False, path_type=Path),
-                  metavar="PATH", help="Manifest to read (repeatable). Auto-discovers when omitted.")
+                  metavar="PATH", help="Dependency file to read (repeatable). Auto-discovers when omitted.")
     @click.pass_context
     def build_soup(ctx, manifest_paths) -> None:
         """Reconcile SOUP items from the project's dependency manifests.

@@ -39,7 +39,7 @@ def link_targets(item: dict, config: Any, target_code: str) -> set[str]:
     doc_type = config.doc_type_of(item["id"])
     declared = config.link_properties(doc_type.code) if doc_type else {}
     if not declared:
-        return set(item.get("all_linked_uids") or [])
+        return set(item.get("all_linked_ids") or [])
     found: set[str] = set()
     for field, allowed in declared.items():
         if allowed is None or target_code in allowed:
@@ -76,7 +76,7 @@ def check_required_traceability(items: list[dict], config: Any) -> dict:
     project's own list in place of them.
 
     Args:
-        items: List of item dicts with 'id', 'all_linked_uids', and item fields.
+        items: List of item dicts with 'id', 'all_linked_ids', and item fields.
         config: ProjectConfig with required_traceability rules.
 
     Returns:
@@ -190,7 +190,7 @@ def check_traceability(items: list[dict], config: Any) -> dict:
     Run full traceability validation.
 
     Args:
-        items: List of item dicts (each must have 'id' and 'all_linked_uids').
+        items: List of item dicts (each must have 'id' and 'all_linked_ids').
         config: ProjectConfig with doc_types and optional traceability config.
 
     Returns:
@@ -285,7 +285,7 @@ def analyse(adapter) -> dict:
 
     Takes an adapter rather than a path: the items are the store's to produce
     and the analysis is this project's to perform. `list_items()` already
-    returns link fields and `all_linked_uids`, so nothing has to be reshaped —
+    returns link fields and `all_linked_ids`, so nothing has to be reshaped —
     the adapter method this replaces did that reshaping *and* called the
     analysis, which is what put analysis inside the storage layer.
     """

@@ -33,13 +33,13 @@ medharness --dhf DHF build soup
 To target a specific file:
 
 ```bash
-medharness --dhf DHF build soup --manifest uv.lock
-medharness --dhf DHF build soup --manifest uv.lock --manifest pnpm-lock.yaml
+medharness --dhf DHF build soup --dependency-file uv.lock
+medharness --dhf DHF build soup --dependency-file uv.lock --dependency-file pnpm-lock.yaml
 ```
 
 ### Persistent source configuration (`soup-sources.yaml`)
 
-For projects with non-standard layouts, multiple manifests, hardware SOUP, or third-party scanning tools, create `DHF/config/soup-sources.yaml`. This file is checked by default whenever no `--manifest` flags are given:
+For projects with non-standard layouts, multiple manifests, hardware SOUP, or third-party scanning tools, create `DHF/config/soup-sources.yaml`. This file is checked by default whenever no `--dependency-file` flags are given:
 
 ```yaml
 sources:
@@ -73,7 +73,7 @@ sources:
         ecosystem: null
 ```
 
-Source priority when multiple are configured: explicit `--manifest` flags → `soup-sources.yaml` → auto-discovery.
+Source priority when multiple are configured: explicit `--dependency-file` flags → `soup-sources.yaml` → auto-discovery.
 
 ### Applying changes
 
@@ -82,7 +82,7 @@ nothing; review the change with `git diff DHF/` before you commit it:
 
 ```bash
 medharness --dhf DHF build soup
-medharness --dhf DHF build soup --manifest uv.lock
+medharness --dhf DHF build soup --dependency-file uv.lock
 ```
 
 ## Exporting an SBOM
@@ -134,9 +134,9 @@ release/test-results/ …        # the JUnit files the release was judged on, co
 
 The baseline names the commit and the `medharness` version that built it, and the SBOM's subject carries the release version.
 
-`--manifest` accepts every format `build soup` reads — `requirements.txt`, `uv.lock`, `poetry.lock`, `pyproject.toml`, `package.json`, `package-lock.json`, `pnpm-lock.yaml`.
+`--dependency-file` accepts every format `build soup` reads — `requirements.txt`, `uv.lock`, `poetry.lock`, `pyproject.toml`, `package.json`, `package-lock.json`, `pnpm-lock.yaml`.
 
-The release SBOM merges both registers. A package read from a `--manifest` but
+The release SBOM merges both registers. A package read from a `--dependency-file` but
 absent from the SOUP register still ships, so it appears — carrying a
 `dhfkit:manifest_source` property instead of a `dhfkit:soup_id`. Leaving it out
 would understate the release and hide the §8.1.2 gap `build soup` exists to close.

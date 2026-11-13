@@ -413,9 +413,7 @@ def _collect_bom(dhf: Path, manifest_paths: list[Path]) -> tuple[dict, list[str]
     for item in open_store(dhf).list_items():
         if item.get("type") == "SOUP":
             dhf_soup.append({
-                # Items expose "id"; keep the artifact key as "uid" so existing
-                # release-baseline.json consumers are unaffected.
-                "uid": item["id"],
+                "id": item["id"],
                 "name": item.get("name", ""),
                 "version": item.get("version", ""),
                 "manufacturer": item.get("manufacturer", ""),
@@ -665,10 +663,10 @@ def build_release(
     errors = ([f"DHF: {e}" for e in gate["errors"]] + [f"Tests: {e}" for e in tests["errors"]]
               + baseline["errors"] + closure_errors)
     warnings = list(baseline.get("warnings", [])) + closure_warnings
-    rel_uid: Optional[str] = None
+    rel_id: Optional[str] = None
     if write and not errors:
         try:
-            rel_uid = record_release(dhf, baseline)
+            rel_id = record_release(dhf, baseline)
         except Exception as exc:  # noqa: BLE001
             # The artifacts are written; a REL the store refused is reported,
             # not raised, so the run still says what it produced.
@@ -688,7 +686,7 @@ def build_release(
     return {
         "version": version,
         "cr_ids": baseline["cr_ids"],
-        "rel_uid": rel_uid,
+        "rel_id": rel_id,
         "artifacts": [f["path"] for f in manifest["files"]],
         "errors": errors,
         "warnings": warnings,
