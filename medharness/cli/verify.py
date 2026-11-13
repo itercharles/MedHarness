@@ -17,8 +17,9 @@ def register(main):
 
     @verify.command("dhf")
     @click.option("--strict", is_flag=True, default=False,
-                  help="Exit non-zero when items lack downstream coverage. "
-                       "Without it, coverage gaps are reported as WARN only.")
+                  help="Fail on what is otherwise only a warning: an item with no downstream "
+                       "coverage, placeholder title or content, and a completed CR that lacks "
+                       "a field its type requires of one.")
     @click.pass_context
     def verify_dhf(ctx: click.Context, strict: bool) -> None:
         """Check the DHF holds together: schema, links, cycles, coverage.
@@ -27,8 +28,9 @@ def register(main):
         links (a link whose target ID does not exist), and links to a type the
         field does not accept.
 
-        Advisory by default: coverage gaps, and title or content that is still a
-        placeholder (TBD, the starter items' "Replace with your own") — pass
+        Advisory by default: coverage gaps, title or content that is still a
+        placeholder (TBD, the starter items' "Replace with your own"), and a
+        completed CR that lacks a field its type requires of one — pass
         --strict to enforce.
         """
         effective_dhf = ctx.obj["dhf"]

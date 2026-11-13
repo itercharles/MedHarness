@@ -151,7 +151,6 @@ An item is its file's fields plus `type` (the item type's code), `file_path`, an
 | `warnings` | list of `RunWarning` | What the run noticed without failing |
 | `errors` | list of `RunError` | Empty unless the run ended with errors |
 | `pr_comments` | list of strings or null | With `--pr`: the URLs of the comments it posted on the PR to report warnings or errors |
-| `stage` | `generate_dhf` | Always `generate_dhf` for `build plan` |
 | `artifacts` | `PlanArtifacts` | What the run changed |
 | `design_review` | `Review` or null | The design review rounds, when one ran |
 
@@ -192,7 +191,6 @@ An item is its file's fields plus `type` (the item type's code), `file_path`, an
 | Field | Type | Meaning |
 |---|---|---|
 | `cycles` | list of `ReviewCycle` | One entry per review round |
-| `narrative` | list of strings | The rounds as sentences, for a log |
 
 `ChangeSet`:
 
@@ -221,7 +219,6 @@ An item is its file's fields plus `type` (the item type's code), `file_path`, an
 | `warnings` | list of `RunWarning` | What the run noticed without failing |
 | `errors` | list of `RunError` | Empty unless the run ended with errors |
 | `pr_comments` | list of strings or null | With `--pr`: the URLs of the comments it posted on the PR to report warnings or errors |
-| `stage` | `develop` | Always `develop` for `build code` |
 | `artifacts` | `CodeArtifacts` | What the run changed |
 | `code_review` | `Review` or null | The code review rounds, when one ran |
 | `checks` | list of `CheckResult` or null | Each `--check` as the harness last ran it; absent without `--check` |

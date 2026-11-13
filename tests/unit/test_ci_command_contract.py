@@ -67,10 +67,10 @@ class TestDevelopCrJsonContract:
         assert r.exit_code == 0, (r.output, r.stderr)
         payload = _split_stdout_json(r.stdout)
         for key in (
-            "cr_id", "stage", "outcome", "summary", "steps", "artifacts", "warnings", "errors",
+            "cr_id", "outcome", "summary", "steps", "artifacts", "warnings", "errors",
         ):
             assert key in payload, f"missing {key}"
-        assert payload["stage"] == "develop"
+        assert "stage" not in payload
         for legacy in ("items_created", "items_updated", "files_written", "status", "corrections", "validation"):
             assert legacy not in payload, f"removed key reappeared: {legacy}"
 
