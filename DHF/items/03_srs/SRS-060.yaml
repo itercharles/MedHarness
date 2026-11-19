@@ -3,12 +3,13 @@ title: item transition refuses a move the item's lifecycle does not allow from i
   current state
 content: '`item transition` shall refuse a move to a state that its type''s lifecycle
   does not reach from the item''s current state, to a state that does not exist, or
-  of an item that does not exist, and shall report a transition whose target the global
-  lifecycle does not define as unavailable with the reason, so that a lifecycle cannot
-  be skipped.'
+  of an item that does not exist, shall say that the type has no lifecycle when asked
+  to move, or for the moves of, an item whose type has none, and shall report a transition
+  whose target the global lifecycle does not define as unavailable with the reason,
+  so that a lifecycle cannot be skipped.'
 verification_criteria: The exit code is 1, stdout is empty, stderr says the move is
-  not allowed (or the item is not found, or names the undefined state) and the item's
-  status is unchanged.
+  not allowed (or the item is not found, or names the undefined state, or that the
+  type has no lifecycle) and the item's status is unchanged.
 testing: 'T1: A move that skips a state is refused.
 
   T2: A move to a state that does not exist is refused.
@@ -16,7 +17,10 @@ testing: 'T1: A move that skips a state is refused.
   T3: A transition to a state the global lifecycle does not define is listed as unavailable,
   with the reason, and refused.
 
-  T4: A transition of an item that does not exist is refused.'
+  T4: A transition of an item that does not exist is refused.
+
+  T5: A transition, or the list of them, of an item whose type has no lifecycle is
+  refused saying so.'
 risk: medium
 verification_method:
 - Test

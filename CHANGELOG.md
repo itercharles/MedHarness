@@ -11,6 +11,17 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Changed
+- `item update` refuses `type`, `doc_type`, `file_path` and `timestamp`, as it refuses a changed `id`. Before, they were written into the item, and `file_path` wrote a copy of it into the current directory.
+- `item create` refuses an `id` in `--data`: IDs are assigned. It was silently dropped.
+- `item list --type` with an unknown code (case-sensitive) exits 1 and lists the valid codes. It answered with an empty list.
+- `item transition`, with or without a state, on an item whose type has no lifecycle says so (`SRS has no lifecycle`) instead of "state 'None'" or an empty list.
+- `init` refuses `--dhf`, which it used to ignore.
+- `verify tests --help` says when `--junit` can be left out (`--cr`, when no item in the CR needs a test).
+
+### Fixed
+- `verify tests` no longer prints each warning twice on stderr when it has no JUnit evidence.
+
 ## [0.81.1] — 2026-11-19
 
 ### Changed

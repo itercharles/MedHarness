@@ -12,7 +12,7 @@ MedHarness does not scaffold a CI workflow — a pipeline carries your runner la
 ## Every command
 
 - **The answer is on stdout, as JSON.** stderr carries readable lines for a person. **stderr is not a contract**: its wording changes freely, so never parse it.
-- **`--dhf PATH` goes before the command** (`medharness --dhf DHF verify dhf`) and defaults to `DHF`.
+- **`--dhf PATH` goes before the command** (`medharness --dhf DHF verify dhf`) and defaults to `DHF`. `init` takes none: it always scaffolds `./DHF`, and refuses `--dhf`.
 - **Commands run locally, as well as in CI.** Nothing commits or pushes, with one exception: `build plan` and `build code` take `--pr N` in CI, which revises from that pull request's reviews and then commits and pushes to its branch. `build release` writes its artifacts to `--out-dir` and records the REL item in the DHF only with `--write`.
 - **`--prompt`** on `build plan` and `build code` prints Markdown, not JSON: the stage's steps and the CR's DHF context, for an agent that is already running. It starts no model and changes nothing.
 
@@ -125,7 +125,7 @@ A link whose target does not exist (a typo, a deleted item) always fails; an ite
 
 An item is its file's fields plus `type` (the item type's code), `file_path`, and `all_linked_ids` — every ID it links to, so a caller need not know which fields are links.
 
-`create` and `update` validate against the item type's schema **before writing**: an unknown field or a missing required field exits `1` with nothing on stdout and the reason on stderr, and no file is written. `update` changes only the fields it is given, and rewrites only those whose value changed, so a review shows the field that changed and nothing else.
+`create` and `update` validate against the item type's schema **before writing**: an unknown field or a missing required field exits `1` with nothing on stdout and the reason on stderr, and no file is written. `update` changes only the fields it is given, and rewrites only those whose value changed, so a review shows the field that changed and nothing else. `create` refuses an `id` (IDs are assigned), and `update` refuses `type`, `doc_type`, `file_path` and `timestamp`, which the store derives, as it refuses a changed `id`. `item list --type` and `item transition` on an item whose type has no lifecycle exit `1` and say what is wrong: an unknown code lists the valid ones (case-sensitive).
 
 ---
 

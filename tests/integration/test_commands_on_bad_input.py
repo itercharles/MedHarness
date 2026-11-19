@@ -88,9 +88,10 @@ class TestItemCommands:
         assert _run(project, "item", "create", "--type", "SRS", "--data", '{"bogus": 1}').exit_code == 1
         assert sorted((project / "DHF" / "items").rglob("*.yaml")) == before
 
-    def test_listing_an_unknown_type_is_empty_not_an_error(self, project: Path) -> None:
+    def test_listing_an_unknown_type_is_refused_with_the_valid_codes(self, project: Path) -> None:
         result = _run(project, "item", "list", "--type", "ZZZ")
-        assert result.exit_code == 0 and result.stdout == ""
+        assert result.exit_code == 1 and result.stdout == ""
+        assert "Unknown doc type 'ZZZ'. Valid codes: " in result.stderr and "SRS" in result.stderr
 
 
 class TestVerifyOnABrokenDhf:

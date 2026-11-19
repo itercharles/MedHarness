@@ -78,6 +78,10 @@ def register(main):
         if terms == []:
             raise click.ClickException("--match needs at least one word.")
         adapter = open_store(ctx.obj["dhf"])
+        if doc_type is not None:
+            codes = [t["code"] for t in adapter.list_item_types()]
+            if doc_type not in codes:
+                raise click.ClickException(f"Unknown doc type '{doc_type}'. Valid codes: {', '.join(codes)}.")
         items = adapter.list_items(doc_type)
         if linked_to is not None:
             anchor = adapter.get_item(linked_to)
@@ -144,6 +148,9 @@ def register(main):
             it = adapter.get_item(item_id)
             if it is None:
                 raise click.ClickException(f"Item '{item_id}' not found.")
+            dt = adapter.config.doc_type_of(item_id)
+            if dt and not dt.lifecycle:
+                raise click.ClickException(f"{dt.code} has no lifecycle: {item_id} has no status to move.")
             click.echo(json.dumps({
                 "item_id": item_id,
                 "current_status": it.get("status"),

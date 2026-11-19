@@ -39,12 +39,10 @@ def test_item_list_filter_by_type(populated_dhf):
         assert item['id'].startswith('SYS-'), f"Expected SYS- prefix, got {item['id']}"
 
 
-def test_item_list_filter_unknown_type_returns_empty(populated_dhf):
-    """item list --type UNKNOWN returns no items (empty output, exit 0)."""
+def test_item_list_filter_unknown_type_is_refused(populated_dhf):
     result = CliRunner().invoke(main, ['--dhf', str(populated_dhf), 'item', 'list', '--type', 'UNKNOWN'])
-    assert result.exit_code == 0
-    items = _parse_lines(result.output)
-    assert items == []
+    assert result.exit_code == 1
+    assert "Unknown doc type 'UNKNOWN'" in result.output
 
 
 class TestRetrievalOptions:

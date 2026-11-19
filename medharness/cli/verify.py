@@ -55,7 +55,9 @@ def register(main):
             raise click.ClickException("DHF validation failed.")
 
     @verify.command("tests")
-    @junit_option("JUnit XML results: a file, or a directory searched for *.xml (repeatable).")
+    @junit_option("JUnit XML results: a file, or a directory searched for *.xml (repeatable). "
+                  "Required, except with --cr when none of the CR's affected_items "
+                  "is a requirement verified by Test or with no method declared.")
     @click.option("--strict", is_flag=True, default=False,
                   help="Make a requirement with no declared verification_method fail. "
                        "Warns by default, so a project adding the field is not blocked.")
@@ -83,17 +85,14 @@ def register(main):
                                        junit_paths=collect_junit_paths(junit_paths),
                                        strict=strict, cr_id=cr_id)
         emit(result)
-        # The rows below print per-type coverage; the envelope's warnings are
-        # about the gate as a whole and have no row to be printed beside.
-        for message in result.get("warnings") or []:
-            click.echo(f"WARN [test-coverage] {message}", err=True)
         rows = details(result)["results"]
         if not rows:
-            # Every detail loop below iterates `results`; with none, the envelope
-            # is the only place the reason exists. Without this, a missing
-            # --junit failed with "Test coverage gaps found." — pointing at
-            # coverage when nothing had been read.
+            # With no rows the envelope is the only place the reason exists, and render_envelope
+            # prints its warnings too; a missing --junit used to fail as "Test coverage gaps found."
             render_envelope(result, "test-coverage")
+        else:
+            for message in result.get("warnings") or []:
+                click.echo(f"WARN [test-coverage] {message}", err=True)
         for row in rows:
             if row["passed"]:
                 click.echo(f"PASS [test-coverage] {row['type']}: "
