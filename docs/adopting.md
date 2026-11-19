@@ -8,6 +8,7 @@ How to take MedHarness into a project, and where each part is documented.
 | Let an agent plan and write a change, with your own agent or unattended in CI | [The AI-assisted CR workflow](ai-workflow.md) |
 | Keep the SOUP register, an SBOM and vulnerability checks | [SOUP, SBOM and vulnerabilities](soup.md) |
 | Change a default, or add a type or a relationship | [Configuration](configuration.md) |
+| Know how far to trust the checks, and what a reviewer still reads | [How far to trust the checks](trust.md) |
 | Look up a command, its options or its answer | [interface.md](interface.md) |
 
 ## Starting fresh
