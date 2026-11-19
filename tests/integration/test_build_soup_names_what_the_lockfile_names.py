@@ -114,6 +114,6 @@ def test_a_package_at_two_versions_is_checked_at_both(project: Path) -> None:
     from medharness.services.verify_soup import soup_gate
 
     answer = soup_gate(project / "DHF", strict=True, query=lambda queries: [{} for _ in queries],
-                       manifest_paths=[project / "be" / "requirements.txt", project / "fe" / "requirements.txt"])
+                       dependency_files=[project / "be" / "requirements.txt", project / "fe" / "requirements.txt"])
     assert answer["passed"] is False
     assert any("manifests resolve 2.19.0" in e for e in answer["errors"]), answer["errors"]

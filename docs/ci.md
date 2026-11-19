@@ -6,7 +6,7 @@ The CI recipe is the whole deployment; a release is cut from it. The AI stages i
 
 `init` does not write a CI workflow, because the pipeline references your branch names, runner labels and secrets. You own it.
 
-Copy the recipe below into `.github/workflows/dhf.yml`, replace `{{medharness_version}}` with the version you pin, and `{{test_command}}` with the command that runs your tests and writes JUnit XML into `test-results/` (for pytest, `pytest --junit-xml=test-results/junit.xml`). It is the whole deployment — three jobs, no server, no database, no account:
+Copy the recipe into `.github/workflows/dhf.yml`. Replace `{{medharness_version}}` with the version you pin, and `{{test_command}}` with the command that runs your tests and writes JUnit XML into `test-results/` (for pytest, `pytest --junit-xml=test-results/junit.xml`). Three jobs, no server, no database, no account:
 
 <details>
 <summary><code>.github/workflows/dhf.yml</code></summary>
@@ -116,7 +116,7 @@ jobs:
           VERSION: ${{ steps.ver.outputs.version }}
         run: |
           medharness --dhf DHF build release \
-            --version "$VERSION" \
+            --release "$VERSION" \
             --out-dir artifacts \
             --junit test-results \
             --write
@@ -152,46 +152,44 @@ jobs:
 
 </details>
 
-What each job does:
-
-| Job | Trigger | Purpose |
+| Job | Runs on | Purpose |
 |-----|---------|---------|
 | `dhf-validate` | PRs, pushes to `main` | Schema, required links, dangling links, coverage |
 | `change-check` | PRs from a branch ending in a CR's ID (`develop/CR-012`) | `verify impact` and `verify tests --cr`: the CR's record of its impact holds for the branch, and what it changed is verified. Other branches are skipped |
-| `release` | `v*` tags | Runs `build release`: the baseline, BOM, SBOM and evidence bundle as a workflow artifact, and the REL item back to `main` through a pull request |
+| `release` | `v*` tags | `build release`: the evidence bundle as a workflow artifact, and the REL item back to `main` through a pull request |
 
-Adopt it incrementally: `dhf-validate` alone is useful from day one. Add `change-check` when changes go through change requests, and `release` when you start cutting versions. Evidence is produced once per release, not on every merge.
+Adopt it incrementally: `dhf-validate` alone is useful from day one. Add `change-check` when changes go through change requests, and `release` when you start cutting versions.
 
-Writing your own pipeline instead? [interface.md](interface.md) is the contract — the result shape every gate returns, exit-code semantics, and what may change between versions.
+Writing your own pipeline instead? [interface.md](interface.md) is the contract: the shape every gate returns, exit codes, and what may change between versions.
 
-## Cutting a release (`build release`)
+## Cutting a release
 
 ```bash
-medharness --dhf DHF build release --version 1.2.0 --out-dir release --junit test-results
+medharness --dhf DHF build release --release 1.2.0 --out-dir release --junit test-results
 ```
 
-`--junit` is required: every requirement must be verified by it, as `verify tests --strict` judges it, whether or not an included CR touched it. One command builds everything a release needs, into one directory: the release baseline, the software BOM, a CycloneDX SBOM, the specifications, a traceability report for each matrix in `traceability_matrices`, test evidence, and `evidence-manifest.json` hashing every file.
+One command builds everything a release needs into one directory: the release baseline, the software BOM, a CycloneDX SBOM, the specifications, a traceability report per matrix, test evidence, and `evidence-manifest.json` hashing every file. `--junit` is required: every requirement must be verified by it.
 
-Before writing anything to the DHF it checks that:
+Before it writes anything to the DHF, it checks that:
 
-- the DHF passes `verify dhf` — with coverage gaps failing, since a release is not the place for advisory findings;
-- every included CR is `completed` (by default, every completed CR not yet in a release; `--cr` to choose) **and still closes**: it meets the criteria of its move to `completed` and the items it changed have passing tests, as `verify dhf` and `verify tests --cr` ask. `completed` is a status anyone can write, so this is asked again, with the `--junit` evidence;
+- the DHF passes `verify dhf`, with coverage gaps failing;
+- every included CR is `completed` (by default every completed CR not yet in a release; `--cr` chooses) **and still closes**: it meets the criteria of its move to `completed` and what it changed has passing tests. `completed` is a status anyone can write, so this is asked again, with your `--junit` evidence;
 - every open defect carries a `release_rationale` (IEC 62304 §9.7).
 
-Add `--write` to record the REL item. It is recorded **only when every check passed** — a failing release still writes its evidence, so you can read why, but leaves the DHF unchanged. The [CI recipe](#setting-up-ci) runs it on `v*` tags and brings the REL item back to `main` through a pull request.
+`--write` records the REL item, **only when every check passed**. A failing release still writes its evidence so you can read why, and leaves the DHF unchanged.
 
 ## Signing a release
 
-When the project keeps `DHF/config/approvers.yaml` (each person with their roles and public keys), a release is signed before it is issued. `approval_roles` and `release_role` in `global.yaml` say which role owns which specification. Without that file none of this applies. The reasoning is in [ADR-004](adr/ADR-004-signed-approvals.md).
+When the project keeps `DHF/config/approvers.yaml` (each person with their roles and public keys), a release is signed before it is issued. `approval_roles` and `release_role` in `global.yaml` say which role owns which specification. Without that file none of this applies ([ADR-004](adr/ADR-004-signed-approvals.md)).
 
 ```bash
-medharness --dhf DHF build release --version 1.2.0 --out-dir release --junit test-results --write
+medharness --dhf DHF build release --release 1.2.0 --out-dir release --junit test-results --write
 medharness --dhf DHF item approve --release 1.2.0 --key ~/.ssh/id_ed25519_sk
 medharness --dhf DHF verify approval --release 1.2.0
 medharness --dhf DHF build approvals --release 1.2.0 --out-dir release
 ```
 
-1. **Run the release.** `--write` also writes `DHF/releases/1.2.0/manifest.yaml`, the item hashes each specification consists of, and `changes.md`, what changed in each since the previous release. Commit both on the release branch.
+1. **Run the release.** `--write` also writes `DHF/releases/1.2.0/manifest.yaml` (the item hashes each specification consists of) and `changes.md` (what changed in each since the previous release). Commit both.
 2. **Each signer approves.** `item approve --release` shows the changes to the documents the signer's roles own, asks for confirmation, and writes one signed record under `DHF/approvals/release-1.2.0/`. Commit it; the record proves itself, so who commits it does not matter.
-3. **Check it.** `verify approval --release` passes when every document of the manifest has a valid signature from its role over its current content, and the release has the quality lead's. An item edited after the manifest was written fails it: run `build release --write` again and sign the affected documents again.
-4. **Render the sheet.** `build approvals` runs that same check and, only if it passes, writes `approval-sheet.html` (or `.pdf` with `--doc-format pdf`): for each document its hashes and every signature over it, with the signer, roles, time, statement, key fingerprint and record ID, and a warning on a signature made without proven presence. The sheet presents the records; they stay the evidence. Every specification a release renders says, when an approvers list exists, to see this sheet.
+3. **Check it.** `verify approval --release` passes when every document has a valid signature from its role over its current content, and the release has the release role's. An item edited after the manifest was written fails it: run `build release --write` again and sign the affected documents again.
+4. **Render the sheet.** `build approvals` runs that check and, only if it passes, writes `approval-sheet.html` (`--doc-format pdf` for PDF): for each document its hashes and every signature over it. The sheet presents the records; they stay the evidence.

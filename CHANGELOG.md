@@ -11,6 +11,33 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.82.0] — 2026-11-20
+
+The interface cleaned up while nobody depends on it yet, input the tool ignored now refused, and a page on how far to trust the checks. Breaking.
+
+### Added
+- `docs/trust.md`, and a README section: what the checks guarantee, which seeded omissions they stop (a table generated from the seeded-omission set), and what the reviewer still reads in every change request.
+
+### Changed
+- `docs/soup.md`, `docs/configuration.md`, `docs/adopting.md`, `docs/ai-workflow.md` and `docs/ci.md` are shorter and in the order a reader does things; what only an agent needs is left to the code and `interface.md`. Their commands, examples and linked anchors are unchanged.
+- The adoption table lists the CI recipe's `change-check` job as its own step.
+- A roadmap review, `docs/reviews/2026-11-19-positioning-gaps-plan.md`: positioning, gaps and ordered tasks.
+- `item update` refuses `type`, `doc_type`, `file_path` and `timestamp`, as it refuses a changed `id`. Before, they were written into the item, and `file_path` wrote a copy of it into the current directory.
+- `item create` refuses an `id` in `--data`: IDs are assigned. It was silently dropped.
+- `item list --type` with an unknown code (case-sensitive) exits 1 and lists the valid codes. It answered with an empty list.
+- `item transition`, with or without a state, on an item whose type has no lifecycle says so (`SRS has no lifecycle`) instead of "state 'None'" or an empty list.
+- `init` refuses `--dhf`, which it used to ignore.
+- **Breaking:** `item transition ID` without a state, which only queried, is now `item transitions ID`; `item transition ID STATE` requires its state. The query answers `{id, status, transitions}`, where it answered `item_id` and `current_status`.
+- **Breaking:** `build release --version VERSION` is now `build release --release VERSION`, the name every command that takes a release already used. `--version` is the tool's own flag only.
+- **Breaking:** `verify soup --offline-mode [fail|warn]` is now `--on-unreachable [fail|warn]`, same values and default.
+- **Breaking:** `item list --brief` answers `{id, type, title, status, all_linked_ids}`: `links` is now `all_linked_ids`, and `status` is added.
+- `verify tests --help` says when `--junit` can be left out (`--cr`, when no item in the CR needs a test).
+- **Breaking:** `build release` lists the files it wrote under `files`, not `artifacts`, so the key means one thing: in `build plan` and `build code`, `artifacts` is still what the run changed.
+- **Breaking:** `build plan` and `build code` no longer report `steps[].started_at`, `steps[].elapsed_ms`, `errors[].code` (it was `field` lower-cased) or `warnings[].details`. A failed model call's `claude_step_failed` warning now carries the tool's output in its `message`.
+
+### Fixed
+- `verify tests` no longer prints each warning twice on stderr when it has no JUnit evidence.
+
 ## [0.81.0] — 2026-11-13
 
 What a new user ran into setting up a project, fixed.

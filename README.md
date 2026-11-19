@@ -40,6 +40,17 @@ The same family of checks stops a requirement with no passing test, a link to an
 that does not exist, and a SOUP component the register does not list. Every failure
 names the item and the field to fix.
 
+## How far to trust it
+
+The AI's analysis is not trusted: it is checked by code, which gives the same result for the same input.
+<!-- BEGIN GENERATED: seeded-count — python scripts/generate_interface.py -->
+The seeded-omission set stops 9 of 12 ways of leaving something out of a change.
+<!-- END GENERATED: seeded-count -->
+The three it misses: test points left unchanged (a warning only), a new hazard linked to nothing,
+and a verifying test weakened. What each check compares, and what the reviewer reads in every
+change request, is in [trust.md](docs/trust.md); to run the set on your machine, see
+[validating your installation](docs/adopting.md#validating-your-installation).
+
 ## What you get
 
 - **A DHF that agrees with the code**, because the check runs on the branch, in the
@@ -149,6 +160,7 @@ on which MedHarness is exercised end to end; its DHF and CI are a worked example
 | [ci.md](docs/ci.md) | the CI recipe, cutting and signing a release |
 | [ai-workflow.md](docs/ai-workflow.md) | a change request from design to code |
 | [agents.md](docs/agents.md) | working with your coding agent |
+| [trust.md](docs/trust.md) | how far to trust the checks, and what the reviewer reads |
 | [soup.md](docs/soup.md) | the SOUP register, SBOM, vulnerability scanning |
 | [configuration.md](docs/configuration.md) | changing the defaults |
 | [interface.md](docs/interface.md) | what a script or pipeline can rely on |

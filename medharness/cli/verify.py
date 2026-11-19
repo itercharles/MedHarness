@@ -55,7 +55,9 @@ def register(main):
             raise click.ClickException("DHF validation failed.")
 
     @verify.command("tests")
-    @junit_option("JUnit XML results: a file, or a directory searched for *.xml (repeatable).")
+    @junit_option("JUnit XML results: a file, or a directory searched for *.xml (repeatable). "
+                  "Required, except with --cr when none of the CR's affected_items "
+                  "is a requirement verified by Test or with no method declared.")
     @click.option("--strict", is_flag=True, default=False,
                   help="Make a requirement with no declared verification_method fail. "
                        "Warns by default, so a project adding the field is not blocked.")
@@ -83,17 +85,14 @@ def register(main):
                                        junit_paths=collect_junit_paths(junit_paths),
                                        strict=strict, cr_id=cr_id)
         emit(result)
-        # The rows below print per-type coverage; the envelope's warnings are
-        # about the gate as a whole and have no row to be printed beside.
-        for message in result.get("warnings") or []:
-            click.echo(f"WARN [test-coverage] {message}", err=True)
         rows = details(result)["results"]
         if not rows:
-            # Every detail loop below iterates `results`; with none, the envelope
-            # is the only place the reason exists. Without this, a missing
-            # --junit failed with "Test coverage gaps found." — pointing at
-            # coverage when nothing had been read.
+            # With no rows the envelope is the only place the reason exists, and render_envelope
+            # prints its warnings too; a missing --junit used to fail as "Test coverage gaps found."
             render_envelope(result, "test-coverage")
+        else:
+            for message in result.get("warnings") or []:
+                click.echo(f"WARN [test-coverage] {message}", err=True)
         for row in rows:
             if row["passed"]:
                 click.echo(f"PASS [test-coverage] {row['type']}: "
@@ -205,7 +204,7 @@ def register(main):
             raise click.exceptions.Exit(1)
 
     @verify.command("soup")
-    @click.option("--dependency-file", "manifest_paths", multiple=True,
+    @click.option("--dependency-file", "dependency_files", multiple=True,
                   type=click.Path(exists=True, dir_okay=False, path_type=Path),
                   metavar="PATH",
                   help="Dependency file to compare the register against (repeatable). "
@@ -213,15 +212,15 @@ def register(main):
     @click.option("--strict", is_flag=True, default=False,
                   help="Make an undocumented or misversioned component fail the gate. "
                        "Warns by default, so a project backfilling its register is not blocked.")
-    @click.option("--offline-mode", type=click.Choice(["fail", "warn"]), default="fail",
+    @click.option("--on-unreachable", type=click.Choice(["fail", "warn"]), default="fail",
                   help="Behaviour when osv.dev is unreachable. 'warn' keeps the gate "
                        "passing for air-gapped or proxy-restricted pipelines.")
     @click.pass_context
     def verify_soup(
         ctx: click.Context,
-        manifest_paths: tuple[Path, ...],
+        dependency_files: tuple[Path, ...],
         strict: bool,
-        offline_mode: str,
+        on_unreachable: str,
     ) -> None:
         """Check the SOUP register matches what ships, and is not known-vulnerable.
 
@@ -246,8 +245,8 @@ def register(main):
         from medharness.services.verify_soup import soup_gate
 
         effective_dhf = ctx.obj["dhf"]
-        result = soup_gate(effective_dhf, offline_mode=offline_mode,
-                           manifest_paths=list(manifest_paths), strict=strict)
+        result = soup_gate(effective_dhf, on_unreachable=on_unreachable,
+                           dependency_files=list(dependency_files), strict=strict)
         emit(result)
 
         for entry in details(result).get("accepted", []):

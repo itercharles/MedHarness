@@ -7,7 +7,7 @@ from pathlib import Path
 
 from medharness.services import git
 from medharness.services.gh import gh
-from medharness.services.stage_run import _begin_step, _finish_step, _warning
+from medharness.services.stage_run import _step, _warning
 
 
 def _pr_base(pr_number: int) -> str | None:
@@ -22,11 +22,10 @@ def _pr_feedback(pr_number: int, steps: list, warnings: list) -> dict | None:
     `--pr` says the run belongs to that PR; it revises only when a reviewer has
     asked for a change on the current commit, so a new or approved PR generates.
     """
-    step, perf = _begin_step("fetch_pr_feedback")
     feedback = _get_pr_feedback(pr_number)
     warnings.extend(feedback["warnings"])
-    steps.append(_finish_step(step, perf, "warning" if feedback["warnings"] else "ok"))
-    said = feedback["diagnostics"]["comments_count"] + feedback["diagnostics"]["reviews_count"]
+    steps.append(_step("fetch_pr_feedback", "warning" if feedback["warnings"] else "ok"))
+    said = feedback["diagnostics"]["comments"] + feedback["diagnostics"]["reviews"]
     return feedback if said else None
 
 
@@ -57,33 +56,23 @@ def _get_pr_feedback(pr_number: int) -> dict:
     inline comments — on the commit the PR now points at.
     """
 
-    def _fetch(kind: str, path: str) -> dict[str, object]:
+    def _fetch(kind: str, path: str) -> tuple[object, dict | None]:
         rc, out = gh(["api", f"repos/{{owner}}/{{repo}}/pulls/{pr_number}{path}"])
         if rc != 0:
-            return {
-                "status": "gh_error",
-                "data": [],
-                "error": out,
-                "warning": _warning(f"github_{kind}_unavailable", f"GitHub {kind} fetch failed: {out}."),
-            }
+            return [], _warning(f"github_{kind}_unavailable", f"GitHub {kind} fetch failed: {out}.")
         try:
-            return {"status": "ok", "data": json.loads(out or "[]"), "error": None}
+            return json.loads(out or "[]"), None
         except json.JSONDecodeError as exc:
-            return {
-                "status": "decode_error",
-                "data": [],
-                "error": str(exc),
-                "warning": _warning(f"github_{kind}_decode_error",
-                                    f"GitHub {kind} response could not be decoded: {exc}."),
-            }
+            return [], _warning(f"github_{kind}_decode_error",
+                                f"GitHub {kind} response could not be decoded: {exc}.")
 
-    pull = _fetch("pull", "")
-    comments = _fetch("comments", "/comments")
-    reviews = _fetch("reviews", "/reviews")
-    head = (pull["data"] or {}).get("head", {}).get("sha") if isinstance(pull["data"], dict) else None
+    pull, pull_warning = _fetch("pull", "")
+    comments, comments_warning = _fetch("comments", "/comments")
+    reviews, reviews_warning = _fetch("reviews", "/reviews")
+    head = pull.get("head", {}).get("sha") if isinstance(pull, dict) else None
 
-    with_comments = {c.get("pull_request_review_id") for c in comments["data"] if isinstance(c, dict)}
-    on_head = [r for r in reviews["data"]
+    with_comments = {c.get("pull_request_review_id") for c in comments if isinstance(c, dict)}
+    on_head = [r for r in reviews
                if isinstance(r, dict) and (head is None or r.get("commit_id") == head)]
     outsiders = [r for r in on_head if r.get("author_association") not in _TRUSTED]
     asked = [
@@ -94,23 +83,12 @@ def _get_pr_feedback(pr_number: int) -> dict:
                  and ((r.get("body") or "").strip() or r.get("id") in with_comments)))
     ]
     asked_ids = {r.get("id") for r in asked}
-    asked_comments = [c for c in comments["data"]
+    asked_comments = [c for c in comments
                       if isinstance(c, dict) and c.get("pull_request_review_id") in asked_ids]
     return {
         "prompt_text": json.dumps({"reviews": asked, "comments": asked_comments}, indent=2),
-        "diagnostics": {
-            "attempted": True,
-            "pr_number": pr_number,
-            "head_sha": head,
-            "comments_status": comments["status"],
-            "comments_error": comments["error"],
-            "reviews_status": reviews["status"],
-            "reviews_error": reviews["error"],
-            "comments_count": len(asked_comments),
-            "reviews_count": len(asked),
-        },
-        "warnings": [w for w in (pull.get("warning"), comments.get("warning"), reviews.get("warning"))
-                     if isinstance(w, dict)] + ([_warning(
+        "diagnostics": {"comments": len(asked_comments), "reviews": len(asked)},
+        "warnings": [w for w in (pull_warning, comments_warning, reviews_warning) if w] + ([_warning(
                          "untrusted_reviews_ignored",
                          f"{len(outsiders)} review(s) by someone who is not an owner, member or collaborator "
                          f"were not given to the agent.")] if outsiders else []),

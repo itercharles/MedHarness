@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import re
-import time
-from datetime import datetime, timezone
 from pathlib import Path
 
 from medharness.services import git
@@ -20,39 +17,12 @@ _MAX_CODE_REVIEW_CYCLES = 3
 _MAX_CHECK_FIX_CYCLES = 2
 
 
-def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+def _warning(code: str, message: str) -> dict:
+    return {"code": code, "message": message}
 
 
-def _warning(code: str, message: str, details: dict | None = None) -> dict:
-    warning = {"code": code, "message": message}
-    if details:
-        warning["details"] = details
-    return warning
-
-
-def _error_code(field: str) -> str:
-    normalized = re.sub(r"[^a-zA-Z0-9]+", "_", field).strip("_").lower()
-    return normalized or "validation_error"
-
-
-def _normalize_errors(errors: list[dict]) -> list[dict]:
-    normalized: list[dict] = []
-    for error in errors:
-        item = dict(error)
-        item.setdefault("code", _error_code(str(item.get("field", ""))))
-        normalized.append(item)
-    return normalized
-
-
-def _begin_step(name: str) -> tuple[dict, float]:
-    return {"name": name, "started_at": _now_iso()}, time.perf_counter()
-
-
-def _finish_step(step: dict, started_perf: float, outcome: str) -> dict:
-    step["outcome"] = outcome
-    step["elapsed_ms"] = int((time.perf_counter() - started_perf) * 1000)
-    return step
+def _step(name: str, outcome: str) -> dict:
+    return {"name": name, "outcome": outcome}
 
 
 def _truncate(text: str, limit: int = 300) -> str:
@@ -75,7 +45,6 @@ def _run_claude_step(
     """Run an LLM step. Returns (exit_code, output, session_id)."""
     config = llm_config or LLMConfig()
     is_anthropic = config.provider == "anthropic"
-    step, step_perf = _begin_step(name)
     rc, output, session_id = _run_llm(prompt, config=config, resume_session=resume_session)
 
     # A session lives on the machine that created it, so a CI runner can never
@@ -88,25 +57,21 @@ def _run_claude_step(
 
     cli_found = "claude CLI not found" not in output if is_anthropic else True
     outcome = "ok" if rc == 0 else ("failed" if critical else "warning")
-    steps.append(_finish_step(step, step_perf, outcome))
+    steps.append(_step(name, outcome))
     if resume_dropped:
         warnings.append(
             _warning(
                 "resume_session_unavailable",
                 f"Session `{resume_session}` is not on this machine; "
                 f"step `{name}` ran without it.",
-                {"step": name, "session_id": resume_session},
             )
         )
     if rc != 0:
-        failure = {"step": name, "exit_code": rc}
-        if output.strip():
-            failure["output_excerpt"] = _truncate(output)
+        excerpt = _truncate(output)
         warnings.append(
             _warning(
                 "claude_cli_missing" if (is_anthropic and not cli_found) else "claude_step_failed",
-                f"Step `{name}` exited with code {rc}.",
-                failure,
+                f"Step `{name}` exited with code {rc}" + (f": {excerpt}" if excerpt else "."),
             )
         )
     return rc, output, session_id
@@ -173,9 +138,8 @@ def _build_response(
     critical_step_failed: bool,
     rejected: bool = False,
 ) -> dict:
-    normalized_errors = _normalize_errors(errors)
     outcome = _determine_outcome(
-        errors=normalized_errors,
+        errors=errors,
         fix_attempted=fix_attempted,
         critical_step_failed=critical_step_failed,
         rejected=rejected,
@@ -186,14 +150,14 @@ def _build_response(
         "summary": _build_summary(
             stage=stage,
             outcome=outcome,
-            errors=normalized_errors,
+            errors=errors,
             fix_attempted=fix_attempted,
             warnings=warnings,
         ),
         "steps": steps,
         "artifacts": artifacts,
         "warnings": warnings,
-        "errors": normalized_errors,
+        "errors": errors,
     }
 
 
@@ -370,7 +334,7 @@ class Run:
 
     def warn(self, found: list[dict]) -> None:
         for w in found:
-            self.warnings.append(_warning(w["code"], w["message"], {"field": w["field"]}))
+            self.warnings.append(_warning(w["code"], w["message"]))
 
     def leave_uncommitted(self) -> None:
         _leave_uncommitted(self.repo_root, self.start_head, self.warnings)

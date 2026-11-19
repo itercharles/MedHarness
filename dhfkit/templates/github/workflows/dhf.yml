@@ -102,7 +102,7 @@ jobs:
           VERSION: ${{ steps.ver.outputs.version }}
         run: |
           medharness --dhf DHF build release \
-            --version "$VERSION" \
+            --release "$VERSION" \
             --out-dir artifacts \
             --junit test-results \
             --write

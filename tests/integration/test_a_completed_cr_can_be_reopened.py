@@ -53,8 +53,41 @@ def test_a_completed_cr_is_reopened_to_develop(dhf: Path) -> None:
 
 @pytest.mark.dhf_links("SRS-062")
 @pytest.mark.dhf_testing("T3")
+def test_the_moves_are_read_by_item_transitions_under_the_names_item_get_uses(dhf: Path) -> None:
+    result = _run(dhf, "item", "transitions", "CR-001")
+
+    assert result.exit_code == 0
+    answer = json.loads(result.stdout)
+    assert set(answer) == {"id", "status", "transitions"}
+    assert answer["id"] == "CR-001" and answer["status"] == "completed"
+    assert _status(dhf) == "completed"
+
+
+@pytest.mark.dhf_links("SRS-062")
+@pytest.mark.dhf_testing("T3")
+def test_item_transition_without_a_state_is_a_usage_error_and_moves_nothing(dhf: Path) -> None:
+    result = _run(dhf, "item", "transition", "CR-001")
+
+    assert result.exit_code == 2 and result.stdout == ""
+    assert "Missing argument 'TO_STATE'" in result.stderr
+    assert _status(dhf) == "completed"
+
+
+@pytest.mark.dhf_links("SRS-062")
+@pytest.mark.dhf_testing("T3")
+def test_item_list_brief_names_the_same_facts_as_item_get(dhf: Path) -> None:
+    result = _run(dhf, "item", "list", "--type", "CR", "--brief")
+
+    row = json.loads(result.stdout.splitlines()[0])
+    assert result.exit_code == 0
+    assert set(row) == {"id", "type", "title", "status", "all_linked_ids"}
+    assert row["status"] == "completed"
+
+
+@pytest.mark.dhf_links("SRS-062")
+@pytest.mark.dhf_testing("T3")
 def test_the_transition_is_offered_on_a_completed_cr(dhf: Path) -> None:
-    moves = {t["to_state"]: t for t in json.loads(_run(dhf, "item", "transition", "CR-001").stdout)["transitions"]}
+    moves = {t["to_state"]: t for t in json.loads(_run(dhf, "item", "transitions", "CR-001").stdout)["transitions"]}
     assert moves["develop"]["can_transition"] is True
 
 
@@ -83,7 +116,7 @@ def test_a_cr_a_release_lists_cannot_be_reopened(dhf: Path) -> None:
 @pytest.mark.dhf_testing("T4")
 def test_a_reopened_cr_is_left_out_of_a_release_until_it_is_completed_again(dhf: Path, tmp_path: Path) -> None:
     junit = verify_the_starter(dhf, tmp_path / "tr")
-    release = lambda: json.loads(_run(dhf, "build", "release", "--version", "1.0.0", "--out-dir",
+    release = lambda: json.loads(_run(dhf, "build", "release", "--release", "1.0.0", "--out-dir",
                                       str(tmp_path / "rel"), "--junit", str(junit)).stdout.splitlines()[0])
     assert release()["cr_ids"] == ["CR-001"]
 

@@ -33,7 +33,7 @@ ROOT = Path(__file__).resolve().parents[2]
 COMMANDS = [
     "verify dhf",
     "verify tests --junit {dhf}",
-    "verify soup --offline-mode warn",
+    "verify soup --on-unreachable warn",
     "verify tests --cr CR-001",
     "verify impact --cr CR-001",
 ]

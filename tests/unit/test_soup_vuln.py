@@ -121,7 +121,7 @@ class TestSoupVulnGate:
     def test_network_error_tolerated_in_warn_mode(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)
         _write_soup(dhf, "SOUP-001", "requests", "2.28.0", ecosystem="PyPI")
-        result = soup_gate(dhf, offline_mode="warn", query=_down)
+        result = soup_gate(dhf, on_unreachable="warn", query=_down)
         assert result["passed"] is True
         assert any("unreachable" in w for w in result["warnings"])
         assert "offline process" in result["summary"]
@@ -382,13 +382,13 @@ class TestVerifySoupCLI:
 
     @pytest.mark.dhf_links("SRS-052")
     @pytest.mark.dhf_testing("T2")
-    def test_offline_mode_warn_exits_zero(self, tmp_path: Path) -> None:
+    def test_on_unreachable_warn_exits_zero(self, tmp_path: Path) -> None:
         import urllib.error
         dhf = _make_dhf(tmp_path)
         _write_soup(dhf, "SOUP-001", "requests", "2.28.0", ecosystem="PyPI")
         with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("no route")):
             r = CliRunner().invoke(
-                main, ["--dhf", str(dhf), "verify", "soup", "--offline-mode", "warn"]
+                main, ["--dhf", str(dhf), "verify", "soup", "--on-unreachable", "warn"]
             )
         assert r.exit_code == 0, r.output
         assert json.loads(r.output.splitlines()[0])["passed"] is True
@@ -396,7 +396,7 @@ class TestVerifySoupCLI:
 
     @pytest.mark.dhf_links("SRS-052")
     @pytest.mark.dhf_testing("T1")
-    def test_offline_mode_defaults_to_fail(self, tmp_path: Path) -> None:
+    def test_on_unreachable_defaults_to_fail(self, tmp_path: Path) -> None:
         import urllib.error
         dhf = _make_dhf(tmp_path)
         _write_soup(dhf, "SOUP-001", "requests", "2.28.0", ecosystem="PyPI")
@@ -419,3 +419,11 @@ class TestVerifySoupCLI:
         assert r.exit_code == 0, r.output
         assert "ACCEPTED [soup-vuln]" in r.output
         assert "Not exploitable here." in r.output
+
+
+def test_the_old_name_of_on_unreachable_is_refused(tmp_path: Path) -> None:
+    dhf = tmp_path / "DHF"
+    dhf.mkdir()
+    result = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", "soup", "--offline-mode", "warn"])
+    assert result.exit_code == 2 and result.stdout == ""
+    assert "No such option" in result.stderr and "--offline-mode" in result.stderr

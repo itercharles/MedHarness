@@ -53,7 +53,7 @@ GATES: tuple[dict[str, Any], ...] = (
                   "documented per-CVE acceptances.",
         "blocking": "conditional",
         "blocking_note": "Known vulnerabilities always fail, and so does an unreachable "
-                         "osv.dev unless --offline-mode warn. Drift from the manifests "
+                         "osv.dev unless --on-unreachable warn. Drift from the manifests "
                          "warns unless --strict.",
         "needs_network": True,
     },

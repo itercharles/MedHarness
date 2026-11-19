@@ -1,41 +1,26 @@
 # Configuration
 
-Everything in `DHF/config/` that you can change, and what each change reaches.
+What you can change in `DHF/config/`, and what each change reaches.
 
 ## Changing the defaults
 
-MedHarness reads two layers. The **defaults** ship inside the package: 13 item
-types — CRS, UC, SYS, SYSARCH, MODULE, SRS, SWDD, RISK, RCM, SOUP, CR, DEF, REL —
-each with its fields and lifecycle, plus the rules for which links are required
-and the templates for the specifications. **Your project** adds files under
-`DHF/config/` and `DHF/documents/specs/`. Where your project has one, it is used
-instead of the default; where it has none, the default applies. That is why a new
-project's `global.yaml` holds only its name, and why upgrading `medharness`
-upgrades every default you have not overridden.
+MedHarness ships defaults: 13 item types (CRS, UC, SYS, SYSARCH, MODULE, SRS, SWDD, RISK, RCM, SOUP, CR, DEF, REL), the links that are required, and the specification templates. Your project overrides any of them by adding a file under `DHF/config/` or `DHF/documents/specs/`. Where you have a file it is used instead; where you have none, the default applies, so upgrading `medharness` upgrades everything you have not overridden.
 
-An override replaces the whole default it names; it never merges into it. Each
-kind of default is overridden in its own place:
+An override **replaces** the default it names, never merges into it. Start from a copy of the default (in [`dhfkit/templates`](../dhfkit/templates)) and edit.
 
-| To change | Do this | Example |
-|---|---|---|
-| A setting, such as which links are required | Write that key in `DHF/config/global.yaml`. Your value replaces the default value of that key, so copy the default value and edit it | `required_traceability: [...]` — your list is the whole list |
-| The fields or lifecycle of an item type | Add `DHF/config/doc_types/srs.yaml` with `code: SRS`. It replaces the default SRS, so start from a copy of the default | give SRS a `hazard_ref` field |
-| An item type of your own | Add a file in the same folder with a new `code` | `code: HWR` for hardware requirements |
-| An item type you don't use | List its code in `omit_doc_types` in `global.yaml` | `omit_doc_types: [UC]` |
-| A specification template | Add a file of the same name in `DHF/documents/specs/` | your own `requirements_specification.md.j2` |
+| To change | Do this |
+|---|---|
+| A setting, such as which links are required | Write that key in `DHF/config/global.yaml`. Your value is the whole value |
+| The fields or lifecycle of an item type | Add `DHF/config/doc_types/srs.yaml` with `code: SRS` |
+| An item type of your own | Add a file there with a new `code` |
+| An item type you do not use | List it in `omit_doc_types` in `global.yaml` |
+| A specification template | Add a file of the same name in `DHF/documents/specs/` |
 
-Copy from the defaults in
-[`dhfkit/templates/config/doc_types`](../dhfkit/templates/config/doc_types),
-[`dhfkit/templates/config/global.yaml`](../dhfkit/templates/config/global.yaml)
-and [`dhfkit/templates/specs`](../dhfkit/templates/specs).
-
-The trade-off: an overridden item type stops following the package's changes to
-that type, so override only what you change.
+An overridden type stops following the package's changes to it, so override only what you change.
 
 ### Your own types and relationships
 
-A relationship is a field on the child item, declared in its doc type with the
-types it may point at. This adds hardware requirements that refine a SYS:
+A relationship is a field on the child item, with the types it may point at. This adds hardware requirements that refine a SYS:
 
 ```yaml
 # DHF/config/doc_types/hwr.yaml
@@ -52,78 +37,43 @@ properties:
 - name: refines
   format: relationship        # or item_multiselect; both hold item IDs
   description: Hardware requirement refines a system requirement
-  target_types: [SYS]         # a link to anything else fails verify dhf and item create|update
+  target_types: [SYS]         # a link to anything else is refused
 ```
 
 ```yaml
 # DHF/config/global.yaml
-required_traceability:        # replaces the default list, so copy the rules you keep
+required_traceability:        # replaces the default list: copy the rules you keep
 - source_type: HWR
   direction: upstream
   field: refines
   target_type: SYS
   min_count: 1
-traceability_matrices:        # the chains: coverage is checked along them
+traceability_matrices:        # the chains coverage is checked along
 - name: Hardware chain
   description: SYS to HWR
   path: [SYS, HWR]
 ```
 
-A rule can name a second way to be satisfied with `or_covered_by: <type>`: the default
-`SYS satisfies CRS` carries `or_covered_by: RCM`, so a system requirement either comes
-from a customer need or is implemented for a risk control (an RCM that lists it under
-`implements`). Write the list again without `or_covered_by` to require a CRS always, or
-without the rule to drop it; `required_traceability: []` turns every rule off.
+`required_traceability: []` turns every rule off. A rule may add `or_covered_by: <type>` as a second way to be satisfied; the default `SYS satisfies CRS` has `or_covered_by: RCM`.
 
-`item create` and `item update` refuse a link to an item that does not exist, so a
-typo never reaches the DHF; `affected_items` is the exception, because it also names
-items the branch deleted.
+Everything reads this: `verify dhf`, `item create|update` (they refuse a link to a missing item or the wrong type), the release's traceability reports, and `build plan`. Only what is configured is checked.
 
-Everything reads this: `verify dhf` (dangling and wrong-type links, required links,
-coverage), `item get` (`all_linked_ids`), the release's traceability reports (one per
-matrix), and `build plan`, whose prompt describes your link fields and chains and
-whose check expects an item it creates to get a child next along a chain. Only
-what is configured is checked: a type with no `target_types` accepts any target.
-
-**Say what belongs at each level.** A doc type's `description` is your own definition of
-its tier: what belongs there, what does not, one example. `build plan` puts it in the
-prompt ("What Belongs at Each Level"), and the model decides from it where a new item sits
-and whether a change needs one at all. The defaults for UC, CRS, SYS, SRS, SYSARCH, MODULE and SWDD
-say it for a typical product; a project with its own copy of those files adds a
-`description:` key to them, in its own words. A type without one is left out.
-
-Projects scaffolded before 0.37 carry full copies of the config and templates.
-They keep working: each copy overrides the default it duplicates. To follow the
-defaults again, delete the copies you have not changed.
+**Say what belongs at each level.** A type's `description` is your definition of its tier: what belongs there, what does not, one example. `build plan` gives it to the model, which decides from it where a new item sits. The defaults say it for a typical product; in your own copy of a type, write it in your words.
 
 ## What `verify impact` reads
 
-- The CR's `affected_items`: the branch's DHF changes must be exactly that list, apart from the CR itself.
-  `--code-path PATH` also requires a change to some file under PATH; without it code is not looked at.
-- `impact_depth` in `global.yaml` is how many typed links out from a changed item it looks for an item
-  that depends on it and was neither changed nor listed in the CR's `reviewed_items`. `0` turns that off.
-  Only item types that sit in a traceability chain count.
-- A MODULE lists the repository paths it owns in `paths` (an entry ending in `/` is a directory, any
-  other a file or glob). A file the branch changed outside the DHF then reaches the SWDD items that name
-  that module and the requirements they implement, which must be changed or listed in `reviewed_items`.
-- Once any module declares `paths`, a changed file that no module owns fails too, unless `unowned_paths`
-  in `global.yaml` exempts it (by default docs, CI workflows, Markdown, licences and lockfiles; `*` in a
-  glob also crosses directories). Until then the code check is off.
+- The CR's `affected_items`: the branch's DHF changes must be exactly that list, apart from the CR itself. `--code-path PATH` also requires a change under PATH.
+- `impact_depth` in `global.yaml`: how many typed links out from a changed item it looks for an item that depends on it and was neither changed nor listed in the CR's `reviewed_items`. `0` turns it off.
+- A MODULE lists the paths it owns in `paths` (a trailing `/` is a directory). A changed file then reaches the SWDD items that name that module, and the requirements they implement, which must be changed or listed in `reviewed_items`.
+- Once any module declares `paths`, a changed file no module owns fails too, unless `unowned_paths` in `global.yaml` exempts it (by default docs, CI workflows, Markdown, licences and lockfiles). Until then the code check is off.
 
 ## Items from another system
 
-By default every command reads one YAML file per item under `DHF/items/`, so a team whose requirements
-live in another tool exports them into that format and runs the same commands. To read the tool directly
-instead, an installed adapter is chosen with `store:` in `global.yaml` (see
-[architecture.md](architecture.md#item-adapters)); `verify impact`, `build plan` and `build code` need
-the files in Git and refuse another store.
+Every command reads one YAML file per item under `DHF/items/`. A team whose requirements live in another tool exports them into that format and runs the same commands. `medharness verify dhf` checks the export.
 
-- The file is named anything ending `.yaml`; the directory under `items/` does not matter.
-- `id` is required, and its prefix (`SRS-`) picks the item type.
-- Only fields the item type declares are allowed. An undeclared one fails `verify dhf`, naming it:
-  declare it by overriding the type first.
-- A link is a field of format `relationship` or `item_multiselect`: a list of IDs pointing up the
-  V-model, each of a type the field's `target_types` accepts. `required_traceability` says which are required.
+- The file is any name ending `.yaml`; the folder does not matter.
+- `id` is required, and its prefix (`SRS-`) picks the type.
+- Only fields the type declares are allowed; declare an extra one by overriding the type first.
+- A link is a field of format `relationship` or `item_multiselect`: IDs of a type its `target_types` accepts.
 
-`medharness verify dhf` checks an export. Renaming or removing a field the defaults declare is a breaking
-change, and the changelog says so.
+To read a tool directly instead, an installed adapter is chosen with `store:` in `global.yaml` ([architecture.md](architecture.md#item-adapters)). `verify impact`, `build plan` and `build code` need the items in Git and refuse another store.

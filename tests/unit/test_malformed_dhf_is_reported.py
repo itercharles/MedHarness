@@ -25,10 +25,10 @@ COMMANDS = [
     ("medharness", ["verify", "dhf"]),
     ("medharness", ["verify", "tests", "--junit", "{dhf}"]),
     ("medharness", ["verify", "tests", "--cr", "CR-001"]),
-    ("medharness", ["verify", "soup", "--offline-mode", "warn"]),
+    ("medharness", ["verify", "soup", "--on-unreachable", "warn"]),
     ("medharness", ["item", "list"]),
     ("medharness", ["build", "soup"]),
-    ("medharness", ["build", "release", "--version", "1.0", "--out-dir", "{tmp}/out"]),
+    ("medharness", ["build", "release", "--release", "1.0", "--out-dir", "{tmp}/out"]),
 ]
 
 

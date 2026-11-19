@@ -66,10 +66,12 @@ def test_editing_an_item_in_a_stable_state_returns_it_to_its_initial_state(dhf: 
 
 @pytest.mark.dhf_links("SRS-059")
 @pytest.mark.dhf_testing("T3")
-def test_an_id_the_caller_gives_is_not_used(dhf: Path) -> None:
+def test_an_id_the_caller_gives_is_refused(dhf: Path) -> None:
+    before = _files(dhf)
+
     result = _item(dhf, "create", "--type", "SRS",
                    "--data", json.dumps({"id": "SRS-500", "title": "t", "derives_from": ["SYS-001"]}))
 
-    assert result.exit_code == 0, result.stderr
-    assert json.loads(result.stdout)["id"] == "SRS-002"
-    assert not list((dhf / "items").rglob("SRS-500.yaml"))
+    assert result.exit_code == 1 and result.stdout == ""
+    assert "IDs are assigned" in result.stderr
+    assert _files(dhf) == before

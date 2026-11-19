@@ -99,7 +99,8 @@ class TestTheFallback:
         """The step has no detail of its own; the warning is the only place the cause can be read."""
         _rc, _out, _sid, _steps, warnings = _step([], [(1, "Error: rate limit exceeded", "")])
         failed = next(w for w in warnings if w["code"] == "claude_step_failed")
-        assert failed["details"]["output_excerpt"] == "Error: rate limit exceeded"
+        assert failed == {"code": "claude_step_failed",
+                          "message": "Step `run_initial_generation` exited with code 1: Error: rate limit exceeded"}
 
     def test_a_lost_session_that_fails_again_still_fails(self) -> None:
         calls: list[str] = []

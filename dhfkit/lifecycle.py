@@ -183,6 +183,9 @@ def execute_transition(
     item = get_item_fn(item_id)
     if item is None:
         raise ValueError(f"Item '{item_id}' not found.")
+    dt = config.doc_type_of(item_id)
+    if dt and not dt.lifecycle:
+        raise ValueError(f"{dt.code} has no lifecycle: {item_id} has no status to move.")
 
     available = get_available_transitions(config, item, listed_in)
     transition = next((t for t in available if t["to_state"] == to_state), None)

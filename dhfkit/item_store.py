@@ -15,6 +15,7 @@ from dhfkit.adapter import DHFAdapter, resolve_adapter
 # What a branch changed, deleted items included: they stay named after they are gone.
 _HISTORICAL_LINK_FIELDS = frozenset({"affected_items"})
 _UID_PATTERN = re.compile(r"^[A-Z][A-Z0-9]*(-[A-Z0-9]+)*-\d+$")
+_NOT_SET_BY_CALLER = ("type", "doc_type", "file_path", "timestamp")
 
 
 def _id_order(uid: str) -> tuple[str, int, str]:
@@ -194,8 +195,9 @@ class ItemStore:
         return errors
 
     def create_item(self, data: dict) -> dict:
-        # CR-006: ID is always auto-generated; any caller-supplied id is ignored
-        data = {k: v for k, v in data.items() if k != 'id'}
+        if 'id' in data:
+            raise ValueError("IDs are assigned: leave 'id' out of the data.")
+        data = dict(data)
         doc_type_code = data.pop('type', None)
         if not doc_type_code:
             raise ValueError("Cannot auto-generate ID: document type not specified")
@@ -238,6 +240,9 @@ class ItemStore:
         existing = self._adapter.load_by_uid(uid)
         if not existing:
             return None
+        for field in _NOT_SET_BY_CALLER:
+            if field in data:
+                raise RefusedWrite(f"{uid} not updated: '{field}' is derived by the store and cannot be set.")
         dt = self._config.doc_type_of(uid)
         current = existing.model_dump().get("status")
         # A status that is no state of the type has no move out of it; writing a real state

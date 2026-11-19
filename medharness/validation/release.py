@@ -30,7 +30,7 @@ def placeholder_starter(root: Path) -> None:
 
 
 def _release(root: Path, *args: str, version: str = "1.0.0", results: Path | None = None) -> tuple[int, dict, str]:
-    return invoke(root, "build", "release", "--version", version, "--out-dir", str(root / "out" / version),
+    return invoke(root, "build", "release", "--release", version, "--out-dir", str(root / "out" / version),
                   "--junit", str(results or root / "results" / "junit.xml"), *args)
 
 
@@ -164,7 +164,7 @@ def verified_requirements_release(root: Path) -> None:
 
 
 def junit_is_required(root: Path) -> None:
-    code, _, stderr = invoke(root, "build", "release", "--version", "1.0.0", "--out-dir", str(root / "out"))
+    code, _, stderr = invoke(root, "build", "release", "--release", "1.0.0", "--out-dir", str(root / "out"))
     check(code == 2 and "--junit" in stderr, f"exited {code}; stderr: {stderr[-300:]!r}")
 
 
@@ -234,8 +234,8 @@ def failing_release_writes_its_evidence(root: Path) -> None:
     edit(root, "CR-001", status="design")
     report = _refused(root, args=("--cr", "CR-001", "--write"))
     check((root / "out" / "1.0.0" / "evidence-manifest.json").is_file(), "evidence-manifest.json is missing")
-    check(any(a.startswith("specifications/SRS_Specification_") for a in report["artifacts"]),
-          f"no specification in {report['artifacts']}")
+    check(any(a.startswith("specifications/SRS_Specification_") for a in report["files"]),
+          f"no specification in {report['files']}")
 
 
 def manifest_hashes_the_test_results(root: Path) -> None:

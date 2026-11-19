@@ -9,7 +9,7 @@ is computed.
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -36,19 +36,15 @@ class RunError(Shape):
     field: str = Field(description="What was wrong, as a dotted path such as `traceability.dangling.satisfies`")
     issue: str = Field(description="The problem, phrased for a reader")
     fix: str = Field(description="What to do about it")
-    code: str = Field(description="A stable identifier derived from `field`")
 
 
 class RunWarning(Shape):
     code: str = Field(description="A stable identifier, e.g. `agent_commits_undone`")
     message: str = Field(description="The warning, phrased for a reader")
-    details: dict[str, Any] | None = Field(default=None, description="Extra facts, when the warning has any")
 
 
 class Step(Shape):
     name: str = Field(description="The step, e.g. `run_initial_generation`, `validate_initial`, `run_review`")
-    started_at: str = Field(description="When it started, ISO 8601 UTC")
-    elapsed_ms: int = Field(description="How long it took")
     outcome: str = Field(description="`ok`, `warning` or `failed`")
 
 
@@ -144,7 +140,7 @@ class ReleaseReport(Shape):
     version: str = Field(description="The version released")
     cr_ids: list[str] = Field(description="The completed CRs it includes")
     rel_id: str | None = Field(description="The REL item recorded; null without `--write` or when a check failed")
-    artifacts: list[str] = Field(description="Files written under `--out-dir`, relative to it")
+    files: list[str] = Field(description="Files written under `--out-dir`, relative to it")
     errors: list[str] = Field(description="What blocked the release; any exits 1, and a failing release still writes its evidence")
     warnings: list[str] = Field(description="What it noticed without blocking, such as a component with no purl")
 

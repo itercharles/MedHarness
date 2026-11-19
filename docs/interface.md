@@ -12,7 +12,7 @@ MedHarness does not scaffold a CI workflow — a pipeline carries your runner la
 ## Every command
 
 - **The answer is on stdout, as JSON.** stderr carries readable lines for a person. **stderr is not a contract**: its wording changes freely, so never parse it.
-- **`--dhf PATH` goes before the command** (`medharness --dhf DHF verify dhf`) and defaults to `DHF`.
+- **`--dhf PATH` goes before the command** (`medharness --dhf DHF verify dhf`) and defaults to `DHF`. `init` takes none: it always scaffolds `./DHF`, and refuses `--dhf`.
 - **Commands run locally, as well as in CI.** Nothing commits or pushes, with one exception: `build plan` and `build code` take `--pr N` in CI, which revises from that pull request's reviews and then commits and pushes to its branch. `build release` writes its artifacts to `--out-dir` and records the REL item in the DHF only with `--write`.
 - **`--prompt`** on `build plan` and `build code` prints Markdown, not JSON: the stage's steps and the CR's DHF context, for an agent that is already running. It starts no model and changes nothing.
 
@@ -40,7 +40,8 @@ A pipeline that only checks exit status needs to parse nothing. If you parse, ch
 | `item list` | List DHF items in ID order. Outputs one JSON object per line. |
 | `item create` | Create a new DHF item. Outputs the created item as JSON. |
 | `item update` | Update fields of an existing DHF item. |
-| `item transition` | Move an item to TO_STATE, or list where it can go when TO_STATE is omitted. |
+| `item transitions` | List where an item can move, and what blocks each move. |
+| `item transition` | Move an item to TO_STATE. |
 | `item approve` | Sign a release's documents, or the approvers list. |
 | `build plan` | Draft the DHF item cascade and impact analysis for a CR, with a model. |
 | `build code` | Write the code and tests for a CR's approved design, with a model. |
@@ -98,11 +99,11 @@ Every check answers from the machine it runs on, and none reads GitHub. During d
 | Value | Meaning |
 |-------|---------|
 | `always` | Any finding fails the check |
-| `conditional` | Some findings always fail; others only under `--strict` (or, for `verify soup`, `--offline-mode`) |
+| `conditional` | Some findings always fail; others only under `--strict` (or, for `verify soup`, `--on-unreachable`) |
 
 - `verify dhf` — schema errors, required-link failures, dangling links, links to a type the field does not accept and a `status` that is no state of the item's type always fail. Coverage gaps, and title or content that is still a placeholder (`placeholder_patterns` in `global.yaml`), warn unless `--strict`. `build release` runs it strict, so the starter DHF cannot ship.
 - `verify tests` — uncovered requirements and unverified tests always fail. A missing `verification_method`, and a test that claims a test point its requirement does not declare, warn unless `--strict`.
-- `verify soup` — known vulnerabilities always fail, and so does an unreachable osv.dev unless `--offline-mode warn`. Drift from the manifests warns unless `--strict`.
+- `verify soup` — known vulnerabilities always fail, and so does an unreachable osv.dev unless `--on-unreachable warn`. Drift from the manifests warns unless `--strict`.
 
 A link whose target does not exist (a typo, a deleted item) always fails; an item with no downstream child yet is normal mid-project and fails only under `--strict`.
 
@@ -116,16 +117,16 @@ A link whose target does not exist (a typo, a deleted item) always fails; an ite
 
 | Command | stdout |
 |---|---|
-| `item list` | one JSON object per line, in ID order (by prefix, then number: `SRS-999` before `SRS-1000`); the count goes to stderr |
+| `item list` | one JSON object per line, in ID order (by prefix, then number: `SRS-999` before `SRS-1000`); the count goes to stderr. With `--brief`, only `id`, `type`, `title`, `status` and `all_linked_ids` |
 | `item get ID` | the item |
 | `item create`, `item update ID` | the item after the write, with its ID |
 | `item transition ID STATE` | the item in its new state |
-| `item transition ID` | `item_id`, `current_status` and `transitions` — where it can go, and what blocks each move |
+| `item transitions ID` | `id`, `status` and `transitions` — where it can go, and what blocks each move |
 | `item approve` | the approval record written, with its path |
 
 An item is its file's fields plus `type` (the item type's code), `file_path`, and `all_linked_ids` — every ID it links to, so a caller need not know which fields are links.
 
-`create` and `update` validate against the item type's schema **before writing**: an unknown field or a missing required field exits `1` with nothing on stdout and the reason on stderr, and no file is written. `update` changes only the fields it is given, and rewrites only those whose value changed, so a review shows the field that changed and nothing else.
+`create` and `update` validate against the item type's schema **before writing**: an unknown field or a missing required field exits `1` with nothing on stdout and the reason on stderr, and no file is written. `update` changes only the fields it is given, and rewrites only those whose value changed, so a review shows the field that changed and nothing else. `create` refuses an `id` (IDs are assigned), and `update` refuses `type`, `doc_type`, `file_path` and `timestamp`, which the store derives, as it refuses a changed `id`. `item list --type` and `item transitions` on an item whose type has no lifecycle exit `1` and say what is wrong: an unknown code lists the valid ones (case-sensitive).
 
 ---
 
@@ -159,8 +160,6 @@ An item is its file's fields plus `type` (the item type's code), `file_path`, an
 | Field | Type | Meaning |
 |---|---|---|
 | `name` | string | The step, e.g. `run_initial_generation`, `validate_initial`, `run_review` |
-| `started_at` | string | When it started, ISO 8601 UTC |
-| `elapsed_ms` | integer | How long it took |
 | `outcome` | string | `ok`, `warning` or `failed` |
 
 `RunWarning`:
@@ -169,7 +168,6 @@ An item is its file's fields plus `type` (the item type's code), `file_path`, an
 |---|---|---|
 | `code` | string | A stable identifier, e.g. `agent_commits_undone` |
 | `message` | string | The warning, phrased for a reader |
-| `details` | object or null | Extra facts, when the warning has any |
 
 `RunError`:
 
@@ -178,7 +176,6 @@ An item is its file's fields plus `type` (the item type's code), `file_path`, an
 | `field` | string | What was wrong, as a dotted path such as `traceability.dangling.satisfies` |
 | `issue` | string | The problem, phrased for a reader |
 | `fix` | string | What to do about it |
-| `code` | string | A stable identifier derived from `field` |
 
 `PlanArtifacts`:
 
@@ -273,7 +270,7 @@ An item is its file's fields plus `type` (the item type's code), `file_path`, an
 | `version` | string | The version released |
 | `cr_ids` | list of strings | The completed CRs it includes |
 | `rel_id` | string or null | The REL item recorded; null without `--write` or when a check failed |
-| `artifacts` | list of strings | Files written under `--out-dir`, relative to it |
+| `files` | list of strings | Files written under `--out-dir`, relative to it |
 | `errors` | list of strings | What blocked the release; any exits 1, and a failing release still writes its evidence |
 | `warnings` | list of strings | What it noticed without blocking, such as a component with no purl |
 

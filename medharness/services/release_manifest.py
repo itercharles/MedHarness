@@ -82,7 +82,7 @@ def load_manifest(dhf_path: Path, version: str) -> tuple[dict | None, str | None
     path = manifest_path(dhf_path, version)
     if not path.is_file():
         return None, (f"Release {version} has no manifest ({path.name} under {RELEASES_DIR}/{version}/). "
-                      f"Run `medharness build release --version {version} --write`.")
+                      f"Run `medharness build release --release {version} --write`.")
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
         documents = data["documents"]
@@ -101,7 +101,7 @@ def drift(manifest: dict, dhf_path: Path, items: list[dict]) -> list[str]:
     version = manifest.get("version")
     hashes = item_hashes(items)
     types = {item["id"]: item["type"] for item in items}
-    rerun = f"Rerun `medharness build release --version {version} --write` so the documents are signed over the current content."
+    rerun = f"Rerun `medharness build release --release {version} --write` so the documents are signed over the current content."
     found = []
     for code, entry in manifest["documents"].items():
         listed = {i["id"]: i["hash"] for i in entry["items"]}

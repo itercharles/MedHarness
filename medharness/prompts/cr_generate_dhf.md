@@ -270,7 +270,7 @@ a MODULE only when the code lives in no existing module.
     medharness --dhf {{dhf}} item update <ITEM_ID> --data '<JSON>'
     medharness --dhf {{dhf}} item get <ITEM_ID>
     medharness --dhf {{dhf}} item list --type <TYPE>
-    medharness --dhf {{dhf}} item list --brief                    # id, type, title, links only
+    medharness --dhf {{dhf}} item list --brief                    # id, type, title, status, all_linked_ids only
     medharness --dhf {{dhf}} item list --match "<words>"         # every word, any field, case-insensitive
     medharness --dhf {{dhf}} item list --linked-to <ITEM_ID>    # items linked to or from it
 

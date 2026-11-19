@@ -1,45 +1,20 @@
 # SOUP, SBOM and vulnerabilities
 
-The register of third-party software, and what is built from it.
+The register of third-party software (SOUP, IEC 62304 §8.1.2), and what is built from it. Three commands, run in this order.
 
-## Syncing SOUP items from dependency manifests (`medharness build soup`)
-
-The `build soup` command reads dependency files from your project and creates or updates SOUP items in the DHF. It reads these lockfile and manifest formats:
-
-| File | Ecosystem |
-|------|-----------|
-| `requirements.txt` | PyPI (pinned `==` only) |
-| `uv.lock` | PyPI |
-| `poetry.lock` | PyPI |
-| `pyproject.toml` | PyPI (best-effort; prefer lockfile) |
-| `package.json` | npm: the versions a pnpm or npm lockfile beside it, or in a directory above it up to the repository root, says are installed; a dependency the lockfile does not list, or a manifest with no lockfile, keeps its range as written (`^2.1.0`): `verify soup` does not look a range up in OSV and says so, and the SBOM gives it no purl |
-| `package-lock.json` | npm (v1/v2/v3) |
-| `pnpm-lock.yaml` | npm: the direct dependencies of every project in it, at the versions pnpm installed (lockfile v6 and later; a workspace link or a git or tarball URL has no registry version and is left out) |
-
-The other lockfile parsers (`uv.lock`, `poetry.lock`, `package-lock.json`) register every package the lockfile
-lists, transitive ones included; the pnpm one registers only what a project declares, since the whole closure is
-rarely a set anyone assesses one by one. Any ecosystem without a parser (Go, Cargo, Maven, yarn, conda, ...) goes
-through a `command` source in `soup-sources.yaml`: one JSON object per line,
-`{"name": ..., "version": ..., "ecosystem": ...}`.
-
-### Auto-discovery
-
-With no flags, `build soup` looks for the supported files in the project root automatically:
+## 1. Fill the register: `build soup`
 
 ```bash
 medharness --dhf DHF build soup
 ```
 
-To target a specific file:
+Reads your dependency files and creates or updates one SOUP item per package. It writes to the working tree and commits nothing: review with `git diff DHF/`, then commit.
 
-```bash
-medharness --dhf DHF build soup --dependency-file uv.lock
-medharness --dhf DHF build soup --dependency-file uv.lock --dependency-file pnpm-lock.yaml
-```
+It finds `requirements.txt`, `uv.lock`, `poetry.lock`, `pyproject.toml`, `package.json`, `package-lock.json` and `pnpm-lock.yaml` in the project root. Name a file with `--dependency-file PATH` (repeatable). Prefer a lockfile: a manifest with only version ranges (`^2.1.0`) gives no exact version to scan or list in the SBOM, and the command says so.
 
-### Persistent source configuration (`soup-sources.yaml`)
+### Persistent source configuration
 
-For projects with non-standard layouts, multiple manifests, hardware SOUP, or third-party scanning tools, create `DHF/config/soup-sources.yaml`. This file is checked by default whenever no `--dependency-file` flags are given:
+Hardware, an OS, a language with no parser (Go, Cargo, Maven…), or several manifests: list them in `DHF/config/soup-sources.yaml`. It is used whenever no `--dependency-file` is given.
 
 ```yaml
 sources:
@@ -73,121 +48,30 @@ sources:
         ecosystem: null
 ```
 
-Source priority when multiple are configured: explicit `--dependency-file` flags → `soup-sources.yaml` → auto-discovery.
+A `command` source prints one JSON object per line. Any ecosystem can be fed this way.
 
-### Applying changes
-
-`build soup` creates and updates the SOUP items in the working tree, and commits
-nothing; review the change with `git diff DHF/` before you commit it:
-
-```bash
-medharness --dhf DHF build soup
-medharness --dhf DHF build soup --dependency-file uv.lock
-```
-
-## Exporting an SBOM
-
-The SOUP register already holds what an SBOM needs — name, version, ecosystem,
-licence, supplier — recorded there because IEC 62304 §8.1.2 asks for it. FDA's
-premarket cybersecurity guidance and the EU Cyber Resilience Act want that in a
-standard machine-readable format. `build release` writes it as
-`sbom.cdx.json`, beside the specifications. Without `--write` the DHF is not
-changed:
-
-```bash
-medharness build release --version 1.2.0 --out-dir release
-```
-
-The output is CycloneDX 1.6 JSON, checked against the official schema by the
-test suite rather than by assertion. Each component carries its SOUP id as
-`bom-ref` and as a `dhfkit:soup_id` property, so a finding in the SBOM leads back
-to the DHF item holding the justification and any documented vulnerability
-acceptance.
-
-**A component gets no `purl` when one cannot be built honestly**, and the release
-names the reason per component as a `WARN [release]` line and in its `warnings`. Two causes need different fixes:
-
-- the ecosystem has no package-URL type — the mapping is a fixed table;
-- the version is a range (`^34.15.1`) rather than a version. §8.1.2 wants the
-  version actually in use, and a purl built from a range resolves against a real
-  registry and matches nothing.
-
-The component is still listed either way, and its `version` is reported exactly as
-the DHF records it — the SBOM does not clean up the register's data. A wrong purl resolves against a real
-registry, so an absent one is safer than a guessed one. The mapped ecosystems are
-PyPI, npm, Go, Maven, crates.io, NuGet, RubyGems, Packagist, Hex and Pub.
-
-Regenerating an unchanged SBOM leaves the file alone, timestamp included — the
-serial number is derived from the component set rather than randomised, so a
-regeneration is not a diff in a repository whose purpose is showing what changed.
-
-Everything `build release` writes:
-
-```
-release/release-baseline.json
-release/software-bom.json      # dhfkit's own shape, unchanged
-release/sbom.cdx.json          # the same release in CycloneDX
-release/evidence-manifest.json # every file above and below, hashed
-release/specifications/ …      # plus traceability reports
-release/test-results/ …        # the JUnit files the release was judged on, copied here so they are hashed
-```
-
-The baseline names the commit and the `medharness` version that built it, and the SBOM's subject carries the release version.
-
-`--dependency-file` accepts every format `build soup` reads — `requirements.txt`, `uv.lock`, `poetry.lock`, `pyproject.toml`, `package.json`, `package-lock.json`, `pnpm-lock.yaml`.
-
-The release SBOM merges both registers. A package read from a `--dependency-file` but
-absent from the SOUP register still ships, so it appears — carrying a
-`dhfkit:manifest_source` property instead of a `dhfkit:soup_id`. Leaving it out
-would understate the release and hide the §8.1.2 gap `build soup` exists to close.
-Where a package is in both, the SOUP item wins: it carries the licence, supplier
-and any documented vulnerability acceptance that the manifest does not.
-
-## SOUP vulnerability scanning (`verify soup`)
-
-SOUP items that carry an `ecosystem` field (e.g. `PyPI`, `npm`, `Go`) are checked against the [OSV vulnerability database](https://osv.dev) on every run:
+## 2. Check it: `verify soup`
 
 ```bash
 medharness --dhf DHF verify soup
 ```
 
-Add the `ecosystem` field to each SOUP item to enable scanning:
+Compares the register with your dependency files, then looks each SOUP item that has an `ecosystem` up in [OSV](https://osv.dev). It fails on a known vulnerability. A package missing from the register, or at another version, only warns; `--strict` makes it fail.
+
+**Accept a vulnerability you have assessed.** Many do not affect your product. Record the reason on the SOUP item and the gate stops blocking on that one:
 
 ```yaml
-id: SOUP-012
-name: requests
-version: "2.28.2"
-ecosystem: PyPI     # enables CVE scanning via osv.dev
-manufacturer: Python Software Foundation
-purpose: HTTP client for REST API calls
-```
-
-Items without `ecosystem` are skipped with a note. The command exits non-zero if any unresolved vulnerabilities are found and outputs structured JSON to stdout. Wire it into CI after `verify dhf` to catch unresolved CVEs before release.
-
-### Accepting a vulnerability you have assessed
-
-IEC 62304 §8.1.2 requires SOUP anomalies to be *evaluated* — not necessarily fixed. Many CVEs do not affect how your product uses the package, and some have no upstream patch. Record the assessment on the SOUP item and the gate stops blocking on it:
-
-```yaml
-id: SOUP-012
-name: requests
-version: "2.28.2"
-ecosystem: PyPI
 accepted_vulns:
   - id: GHSA-x84v-xcm2-53pg
-    rationale: "Affected redirect handling is not reachable — we never follow cross-host redirects. Assessed in CR-018."
+    rationale: "Redirect handling is not reachable: we never follow cross-host redirects. Assessed in CR-018."
 ```
 
-Both keys are required. An entry without a `rationale` — or a bare ID string — is reported as a warning and the vulnerability **keeps blocking**, because an acceptance with no recorded reason is not an assessment.
+Both keys are required; without a `rationale` the vulnerability keeps blocking. A new vulnerability in the same package still fails, because acceptance is per ID. Accepted ones stay visible in the output.
 
-Acceptance is per-vulnerability-ID by design. A newly published CVE against the same package still fails the gate, so blanket suppression cannot silently absorb future findings. `verify soup` prints accepted entries as `ACCEPTED [soup-vuln]` lines and lists them in the `warnings` of its answer, so they stay visible in CI logs and evidence bundles.
+**No network.** `verify soup` calls `api.osv.dev` and fails if it cannot. If scanning happens elsewhere, `--on-unreachable warn` lets it pass and records the outage in the answer.
 
-### Air-gapped and proxy-restricted pipelines
+## 3. Release it: the SBOM
 
-`verify soup` calls `api.osv.dev`. Where that host is unreachable, the gate fails by default rather than passing silently. If your SOUP scanning happens through a separate offline process, tolerate the outage explicitly:
+`build release` writes `sbom.cdx.json` (CycloneDX 1.6) with the specifications and evidence, from the same register. Each component's `bom-ref` is its SOUP id, so a finding leads back to the item that justifies it. A package in your dependency files but not in the register is still listed, so the release does not understate what ships.
 
-```bash
-medharness --dhf DHF verify soup --offline-mode warn
-```
-
-The gate then passes, but still records the outage in the `warnings` of its answer and prints a `WARN [soup-vuln]` line — so the gap is visible in the evidence bundle rather than invisible. Keep the default (`--offline-mode fail`) anywhere the scan is expected to run.
+A component with a version range, or an ecosystem with no package-URL type, is listed without a `purl`, and the release names the reason on a `WARN [release]` line. Fix it by pinning the version in the register.

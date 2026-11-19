@@ -38,7 +38,7 @@ CLOSED = {"implementation_notes": "n", "affected_risk_items": []}
 
 def _release(dhf: Path, *extra: str, junit: Path | None = None):
     junit = junit or verify_the_starter(dhf, dhf.parent / "test-results")
-    result = CliRunner().invoke(main, ["--dhf", str(dhf), "build", "release", "--version", "1.0.0",
+    result = CliRunner().invoke(main, ["--dhf", str(dhf), "build", "release", "--release", "1.0.0",
                                        "--out-dir", str(dhf.parent / "rel"), "--junit", str(junit), *extra])
     return result, ReleaseReport.model_validate_json(result.stdout.splitlines()[0])
 
@@ -89,14 +89,14 @@ def test_every_requirement_must_be_verified_by_the_junit_given(tmp_path: Path) -
 @pytest.mark.dhf_testing("T3")
 def test_a_release_without_junit_is_refused(tmp_path: Path) -> None:
     dhf = _project(tmp_path, **CLOSED, affected_items=[])
-    result = CliRunner().invoke(main, ["--dhf", str(dhf), "build", "release", "--version", "1.0.0",
+    result = CliRunner().invoke(main, ["--dhf", str(dhf), "build", "release", "--release", "1.0.0",
                                        "--out-dir", str(tmp_path / "rel")])
     assert result.exit_code == 2 and "--junit" in result.output
 
 
 def test_every_configured_matrix_gets_a_traceability_report(tmp_path: Path) -> None:
     _, report = _release(_project(tmp_path, **CLOSED, affected_items=[]))
-    reports = [a for a in report.artifacts if a.startswith("traceability/") and a.endswith(".json")]
+    reports = [a for a in report.files if a.startswith("traceability/") and a.endswith(".json")]
     assert "traceability/Requirements_Traceability_Report.json" in reports
     assert any("System_Requirements_to_System_Architecture" in a for a in reports), reports
 
@@ -122,7 +122,7 @@ def test_a_failing_release_still_writes_the_evidence_to_the_out_dir(tmp_path: Pa
     result, report = _release(dhf, "--write")
 
     assert result.exit_code == 1 and report.rel_id is None
-    assert "evidence-summary.json" in report.artifacts, report.artifacts
-    assert any(a.startswith("specifications/SRS_Specification_") for a in report.artifacts), report.artifacts
+    assert "evidence-summary.json" in report.files, report.files
+    assert any(a.startswith("specifications/SRS_Specification_") for a in report.files), report.files
     assert (tmp_path / "rel" / "evidence-manifest.json").is_file()
     assert not (dhf / "releases").exists()

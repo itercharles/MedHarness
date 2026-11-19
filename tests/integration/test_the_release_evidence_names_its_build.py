@@ -26,7 +26,7 @@ def project(tmp_path: Path) -> Path:
 
 
 def _release(root: Path) -> Path:
-    code, report, _ = invoke(root, "build", "release", "--version", "1.0.0", "--out-dir", str(root / "out"),
+    code, report, _ = invoke(root, "build", "release", "--release", "1.0.0", "--out-dir", str(root / "out"),
                              "--junit", str(root / "results" / "junit.xml"))
     assert code == 0, report.get("errors")
     return root / "out"
@@ -50,7 +50,7 @@ def test_a_directory_of_test_results_is_copied_whole_and_two_with_one_name_do_no
     for name in ("srs", "sys"):
         (project / "more" / name).mkdir(parents=True)
         (project / "more" / name / "junit.xml").write_text((project / "results" / "junit.xml").read_text() + f"<!--{name}-->")
-    code, report, _ = invoke(project, "build", "release", "--version", "1.0.0", "--out-dir", str(project / "out"),
+    code, report, _ = invoke(project, "build", "release", "--release", "1.0.0", "--out-dir", str(project / "out"),
                              "--junit", str(project / "results" / "junit.xml"),
                              "--junit", str(project / "more" / "srs"), "--junit", str(project / "more" / "sys"))
     assert code == 0, report.get("errors")

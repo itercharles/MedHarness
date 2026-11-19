@@ -53,17 +53,14 @@ def test_item_create_invalid_json_exits_1(populated_dhf):
     assert result.exit_code == 1
 
 
-def test_item_create_ignores_supplied_id(populated_dhf):
-    """item create ignores any id field in --data and auto-generates one (CR-006)."""
-    data = json.dumps({'id': 'SYS-999', 'title': 'Should ignore ID', 'content': 'x', 'category': 'Functional'})
+def test_item_create_refuses_supplied_id(populated_dhf):
+    data = json.dumps({'id': 'SYS-999', 'title': 'Should refuse ID', 'content': 'x', 'category': 'Functional'})
     result = CliRunner().invoke(main, [
         '--dhf', str(populated_dhf), 'item', 'create',
         '--type', 'SYS', '--data', data,
     ])
-    assert result.exit_code == 0
-    created = _parse_json(result.output)
-    assert created['id'] != 'SYS-999'
-    assert created['id'].startswith('SYS-')
+    assert result.exit_code == 1
+    assert 'IDs are assigned' in result.output
 
 
 def test_item_create_persists_item(populated_dhf):

@@ -27,7 +27,7 @@ ROOT = Path(__file__).resolve().parents[2]
 GATES = {
     "verify dhf": [],
     "verify tests": ["--junit", "{dhf}"],
-    "verify soup": ["--offline-mode", "warn"],
+    "verify soup": ["--on-unreachable", "warn"],
     "verify impact": ["--cr", "CR-001"],
 }
 

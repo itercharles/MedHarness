@@ -111,8 +111,8 @@ def _drift_messages(drift: dict) -> list[str]:
 def soup_gate(
     dhf_path: Path,
     *,
-    offline_mode: str = "fail",
-    manifest_paths: list[Path] | None = None,
+    on_unreachable: str = "fail",
+    dependency_files: list[Path] | None = None,
     strict: bool = False,
     query: Callable[[list[dict]], list[dict]] = osv_querybatch,
     lookup: Callable[[str], dict] = osv_vuln,
@@ -141,7 +141,7 @@ def soup_gate(
     ``osv_vuln``; a test passes its own.
 
     Args:
-        offline_mode: ``"fail"`` (default) treats an unreachable osv.dev as a gate
+        on_unreachable: ``"fail"`` (default) treats an unreachable osv.dev as a gate
             failure. ``"warn"`` reports the outage but leaves the gate passing, for
             air-gapped or proxy-restricted pipelines where the scan runs elsewhere.
 
@@ -162,7 +162,7 @@ def soup_gate(
     adapter = open_store(dhf_path)
     all_items = adapter.list_items()
     soup_items = [it for it in all_items if it.get("type") == "SOUP"]
-    drift = _soup_drift(dhf_path, soup_items, manifest_paths)
+    drift = _soup_drift(dhf_path, soup_items, dependency_files)
     drift_blocks = strict and bool(drift["undocumented"] or drift["misversioned"])
 
     checkable: list[dict] = []
@@ -253,11 +253,11 @@ def soup_gate(
                                    f"was refused by osv.dev (HTTP {one.code}) and not checked — "
                                    f"is the ecosystem spelt as osv.dev names it (PyPI, npm, Go, …)?")
     except OSError as exc:
-        tolerated = offline_mode == "warn"
+        tolerated = on_unreachable == "warn"
         outage = f"osv.dev unreachable: {exc}"
         return outcome(tolerated, (
             f"SOUP vulnerability scan skipped — osv.dev unreachable ({exc}). "
-            "Gate tolerated the outage (--offline-mode warn); scan SOUP through "
+            "Gate tolerated the outage (--on-unreachable warn); scan SOUP through "
             "your offline process to keep IEC 62304 §8.1.2 evidence complete."
             if tolerated
             else f"SOUP vulnerability check failed: {exc}"
@@ -325,7 +325,7 @@ def soup_gate(
 def _soup_drift(
     dhf_path: Path,
     soup_items: list[dict],
-    manifest_paths: list[Path] | None,
+    dependency_files: list[Path] | None,
 ) -> dict:
     """The register against the manifests, read-only.
 
@@ -338,7 +338,7 @@ def _soup_drift(
     )
 
     packages, _parsed, errors = collect_manifest_packages(
-        dhf_path, list(manifest_paths or [])
+        dhf_path, list(dependency_files or [])
     )
     diff = diff_against_dhf(packages, soup_items)
     return {

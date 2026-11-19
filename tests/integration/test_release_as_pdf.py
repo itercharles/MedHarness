@@ -51,7 +51,7 @@ def test_a_release_writes_its_documents_as_pdf(tmp_path: Path) -> None:
     cr.write_text(yaml.safe_dump(data))
     out = tmp_path / "rel"
 
-    result = CliRunner().invoke(main, ["--dhf", str(dhf), "build", "release", "--version", "1.0.0",
+    result = CliRunner().invoke(main, ["--dhf", str(dhf), "build", "release", "--release", "1.0.0",
                                        "--out-dir", str(out), "--doc-format", "pdf",
                                        "--junit", str(verify_the_starter(dhf, tmp_path / "tr"))])
 

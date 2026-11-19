@@ -76,7 +76,7 @@ class TestPushToThePr:
 class TestRevisionNeedsSomethingToRevise:
     def _feedback(self, comments: int, reviews: int) -> dict:
         return {"prompt_text": "[]", "warnings": [],
-                "diagnostics": {"comments_count": comments, "reviews_count": reviews}}
+                "diagnostics": {"comments": comments, "reviews": reviews}}
 
     def test_a_new_pr_with_no_reviews_generates(self) -> None:
         with patch.object(pr_feedback, "_get_pr_feedback", return_value=self._feedback(0, 0)):

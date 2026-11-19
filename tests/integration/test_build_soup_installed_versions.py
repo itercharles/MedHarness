@@ -119,7 +119,7 @@ def test_verify_soup_does_not_look_a_range_up_and_says_so(project: Path) -> None
 @pytest.mark.dhf_testing("T3")
 def test_an_ecosystem_osv_does_not_know_is_named_and_the_rest_is_still_scanned(project: Path) -> None:
     """osv.dev answers HTTP 400 to the whole batch for one bad ecosystem; that was read as an
-    outage, so with `--offline-mode warn` no package was scanned and the gate passed."""
+    outage, so with `--on-unreachable warn` no package was scanned and the gate passed."""
     import io
     import urllib.error
 
@@ -135,7 +135,7 @@ def test_an_ecosystem_osv_does_not_know_is_named_and_the_rest_is_still_scanned(p
             raise urllib.error.HTTPError("https://api.osv.dev", 400, "invalid ecosystem", {}, io.BytesIO())
         return [{"vulns": [{"id": "GHSA-jinja"}]} for _ in queries]
 
-    answer = soup_gate(project / "DHF", query=query, lookup=lambda _id: {}, offline_mode="warn")
+    answer = soup_gate(project / "DHF", query=query, lookup=lambda _id: {}, on_unreachable="warn")
 
     assert answer["passed"] is False
     assert any("GHSA-jinja" in e for e in answer["errors"]), answer["errors"]

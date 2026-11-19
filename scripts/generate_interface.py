@@ -11,6 +11,7 @@ drift from the code. The prose around them is written by hand.
 
 from __future__ import annotations
 
+import importlib.util
 import inspect
 import re
 import sys
@@ -139,33 +140,69 @@ def render_shapes() -> str:
     return "\n".join(lines).rstrip()
 
 
+def _seeded_omissions() -> list[tuple[str, str | None, str]]:
+    """(what was left out, the gate that stopped it or None, why it was not) for each case of the seeded-omission test."""
+    path = ROOT / "tests" / "integration" / "test_seeded_omissions_are_stopped.py"
+    spec = importlib.util.spec_from_file_location("seeded_omissions_test", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    rows = []
+    for param in module.OMISSIONS:
+        omit, gate = param.values
+        missed = [m for m in param.marks if m.name == "xfail"]
+        why = missed[0].kwargs["reason"].split(": ", 1)[1] if missed else ""
+        rows.append((inspect.cleandoc(omit.__doc__), gate, why))
+    return rows
+
+
+def render_seeded_table() -> str:
+    lines = ["| Left out of an honest change | Result |", "|---|---|"]
+    for left_out, gate, why in _seeded_omissions():
+        lines.append(f"| {left_out} | {f'Stopped by `{gate}`' if gate else f'**Not stopped:** {why}'} |")
+    return "\n".join(lines)
+
+
+def render_seeded_count() -> str:
+    rows = _seeded_omissions()
+    stopped = sum(1 for _, gate, _ in rows if gate)
+    return f"The seeded-omission set stops {stopped} of {len(rows)} ways of leaving something out of a change."
+
+
 BLOCKS = {"reference": render_reference, "gates": render_gate_table,
           "envelope": render_envelope, "shapes": render_shapes}
 
+#: Other documents with generated blocks.
+OTHER_BLOCKS = {
+    ROOT / "docs" / "trust.md": {"seeded-count": render_seeded_count, "seeded-table": render_seeded_table},
+    ROOT / "README.md": {"seeded-count": render_seeded_count},
+}
 
-def update(text: str) -> str:
+
+def update(text: str, blocks: dict = BLOCKS) -> str:
     """`text` with every generated block replaced by a fresh rendering."""
-    for name, render in BLOCKS.items():
+    for name, render in blocks.items():
         pattern = re.compile(
             rf"(<!-- BEGIN GENERATED: {name} [^>]*-->)\n.*?\n?(<!-- END GENERATED: {name} -->)", re.S
         )
         if not pattern.search(text):
-            raise SystemExit(f"{DOC.name} has no GENERATED block named {name!r}")
+            raise SystemExit(f"the document has no GENERATED block named {name!r}")
         text = pattern.sub(lambda m: f"{m.group(1)}\n{render()}\n{m.group(2)}", text)
     return text
 
 
 def main() -> int:
-    current = DOC.read_text(encoding="utf-8")
-    fresh = update(current)
-    if "--check" in sys.argv:
-        if fresh != current:
-            print(f"{DOC.relative_to(ROOT)} is out of date: run python scripts/generate_interface.py",
-                  file=sys.stderr)
-            return 1
-        return 0
-    DOC.write_text(fresh, encoding="utf-8")
-    return 0
+    status = 0
+    for path, blocks in {DOC: BLOCKS, **OTHER_BLOCKS}.items():
+        current = path.read_text(encoding="utf-8")
+        fresh = update(current, blocks)
+        if "--check" in sys.argv:
+            if fresh != current:
+                print(f"{path.relative_to(ROOT)} is out of date: run python scripts/generate_interface.py",
+                      file=sys.stderr)
+                status = 1
+        else:
+            path.write_text(fresh, encoding="utf-8")
+    return status
 
 
 if __name__ == "__main__":

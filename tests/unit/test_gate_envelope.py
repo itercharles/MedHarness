@@ -71,8 +71,8 @@ def dhf(tmp_path: Path) -> Path:
 def _call(name: str, dhf: Path):
     fn = {"ci_structural_gate": ci_structural_gate, "soup_gate": soup_gate}[name]
     kwargs = {}
-    if "offline_mode" in inspect.signature(fn).parameters:
-        kwargs["offline_mode"] = "warn"  # keep the network out of the test
+    if "on_unreachable" in inspect.signature(fn).parameters:
+        kwargs["on_unreachable"] = "warn"  # keep the network out of the test
     return fn(dhf, **kwargs)
 
 
