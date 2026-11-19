@@ -1,18 +1,10 @@
 # The AI-assisted CR workflow
 
-How a change request becomes a design and then code: with the coding agent you already use, or unattended in CI.
+How a change request becomes a design and then code: with the coding agent you already use, or unattended in CI. Every step is a separate command, so you can run it by hand or wire it into CI.
 
-## AI-assisted CR workflow
+## With the coding agent you already use
 
-MedHarness can drive the full design-to-code cycle for a change request. The workflow is optional — each step is a separate CLI command you can run manually or wire into CI.
-
-### With the coding agent you already use
-
-`--prompt` on `build plan` and `build code` prints the stage — its steps and
-this CR's DHF context, exactly what the CI agent is given — for an agent that is
-already running, and starts nothing. `init` writes this section into
-`AGENTS.md`, which most coding agents read, and a `CLAUDE.md` that imports it
-for Claude Code. A project that predates it adds the section by hand:
+`build plan --prompt` and `build code --prompt` print the stage (its steps and this CR's DHF context, exactly what the CI agent is given) for an agent that is already running, and start nothing. `init` writes the section below into `AGENTS.md`, which most coding agents read, and a `CLAUDE.md` that imports it. A project that predates it adds the section by hand:
 
 ```markdown
 
@@ -44,65 +36,37 @@ Go through `medharness item` for every DHF question and change, inside a CR or n
 Work locally. Do not push, open an issue or a pull request, or start a workflow unless you are asked to use CI.
 ```
 
-Then ask your agent to "open a CR for the PDF export and update the DHF": it
-creates the CR, runs `build plan --cr CR-015 --prompt`, and does what it says.
+Then ask your agent to "open a CR for the PDF export and update the DHF". It creates the CR, runs `build plan --cr CR-015 --prompt`, and does what it says.
 
-### The CR fields the stages need
+## The stages
 
-`build plan` records its analysis on the CR (`triage_result` when it rejects, `impact_analysis`, `implementation_notes`, `affected_items`, `reviewed_items`, `affected_risk_items`) and `build code` and the gates read them back, so the CR type in `cr.yaml` has to declare all six. A project that edits its `cr.yaml` and drops one gets an error from `verify dhf`, and `build plan` and `build code` refuse before any model runs, each naming the field.
+**`build plan --cr CR-001`** is the design. It triages the CR, works out what the change touches and what it leaves alone, writes the items that need to change, and records the analysis on the CR: `impact_analysis`, `implementation_notes`, `affected_items`, `reviewed_items`, `affected_risk_items`, and `triage_result` when it rejects. Before it finishes it checks that record, and fails the run, after one fix pass, when it is incomplete or names an item the DHF does not have. A CR that triage rejects stops there: no design, `outcome: rejected`, exit 1, the reason in `errors`.
 
-### The CR's state is yours
+**`build code --cr CR-001`** reads `implementation_notes` as its spec (it refuses a CR without them, naming `build plan`), writes the code, tags tests with `@links:<ITEM_ID>`, and runs a review loop. `artifacts.files_changed` lists the code changed on the branch; `MEDHARNESS_CODE_PATHS` (e.g. `src/,lib/`) narrows it.
 
-`build plan` and `build code` do not read or move a CR's state: move it with `medharness item transition`, from your workflow or by hand (`cr.yaml` says which moves exist and what each requires). `build plan` needs the CR to exist; `build code` needs it to carry `implementation_notes`, the plan it implements, and says so when it does not.
+Neither moves the CR's state. Move it with `medharness item transition`, by hand or from your workflow; `cr.yaml` says which moves exist and what each requires. The CR type must declare the six fields above: a project that drops one gets an error from `verify dhf`, and the stages refuse before any model runs.
 
-### `build plan` — design phase
+The details of what `build plan` checks, and the warnings it gives (a created item that reads like an existing one, an item that grew by more than 40 lines, test points left unchanged), are in its prompt and in [interface.md](interface.md).
 
-```bash
-medharness --dhf DHF build plan --cr CR-001
-```
+## Closing a CR
 
-Runs triage, works out what the change touches and what it leaves alone (test files first, then a top-down drill), writes the items that need to change, and writes an implementation plan into `implementation_notes` on the CR item. Before it finishes it checks that the record is complete (below), so the fix pass can correct it. On completion the CR item carries:
-
-| Field | Written by | Required at closure |
-|-------|-----------|-------------------|
-| `triage_result` | Step 2 (triage), only when it rejects the CR: `verdict: rejected`, the reason in `notes` | no; an accepted CR has none, and a rejected one stops before the rest is written |
-| `impact_analysis` | Steps 1-5: assumptions, anchors with their evidence, every item examined and left unchanged, why each created item is not an update, and a verdict for each of nine dimensions | checked by `build plan`; not a closure gate |
-| `affected_risk_items` | Step 6 (every risk and control relevant, changed or not) | ✓ explicit list (can be `[]`) |
-| `implementation_notes` | Step 6 (impl plan) | ✓ non-empty |
-| `affected_items` | Step 6; in CI, `build plan` and `build code` rewrite it from the branch | ✓ explicit list (can be `[]`) |
-| `reviewed_items` | Step 6: items that depend on a changed one and were reviewed, needing no change | only as `verify impact` requires (below) |
-
-`build plan` fails the run, after one fix pass, when the `impact_analysis` is missing a key or one of the nine dimensions; names an item the DHF does not have; leaves an anchor, a created item or a reviewed item without its evidence or reason; leaves a parent of a changed requirement neither changed nor reviewed; or leaves out a risk control that implements a changed item, or a risk it mitigates, from `affected_risk_items`. A created item that reads like an existing item of its type (similarity of 0.75 or more) is a warning, and so is an existing item that gained more than 40 lines (`large_edit`): a change to one behaviour is a line or two. A requirement whose `content` or `verification_criteria` changed while its `testing` points did not is a warning too (`test_points_unchanged`). A CR that triage rejects (`triage_result.verdict` is `rejected`, with its reason in `notes`) stops there: no design is generated or checked, no design review runs, and the run ends with `outcome: rejected` and exit 1, the reason in `errors` (a caller that treats a non-zero exit as "no design" needs nothing more). `build plan` does not move the CR to any state; that is the project's to do.
-
-### `build code` — development phase
+Before the merge, on the branch:
 
 ```bash
-medharness --dhf DHF build code --cr CR-001
-```
-
-Reads `implementation_notes` as the primary spec (it refuses a CR that has none, naming `build plan`) and implements the code, annotates tests with `@links:<ITEM_ID>`, and runs a code review loop.
-
-The answer's `artifacts.files_changed` lists the code changed on the branch, committed or not: the whole repository except the DHF. Set `MEDHARNESS_CODE_PATHS` (comma-separated, e.g. `src/,lib/`) to narrow it.
-
-### Closing a CR
-
-```bash
+medharness --dhf DHF verify impact --cr CR-001 --code-path src/
 medharness --dhf DHF verify tests --cr CR-001 --junit test-results
 medharness --dhf DHF verify dhf --strict
 ```
 
-Run both on the branch to block the merge — the [`change-check` job](ci.md#setting-up-ci) of the CI recipe does, for any branch named for its CR, and `verify impact --cr CR-001` with them — and `verify tests --cr` again on `main`, where the tests re-run against whatever else landed.
+The [`change-check` job](ci.md#setting-up-ci) of the CI recipe runs the first two for any branch named for its CR. Run `verify tests --cr` again on `main`, where the tests re-run against whatever else landed.
 
-`verify tests --cr` judges the items this CR touched only, as under `--strict`, so the CR is not charged the DHF's other gaps, and requires the CR to carry what its type requires of the move to `completed`, whatever state it is in, so it can block the merge while the CR is still in `develop`. Every item in `affected_items` that is a requirement (CRS, SYS, SRS) must have `verification_method` set, and those with `Test` need passing JUnit evidence; the declared test points must each be covered. A CR that is not in the DHF fails.
+`verify tests --cr` judges only the items this CR touched, so the CR is not charged the DHF's other gaps. It requires the CR to carry what its type requires of the move to `completed`, whatever state it is in, so it can block the merge while the CR is still in `develop`. Those are, by default, `implementation_notes` (non-empty), `affected_items` and `affected_risk_items` (explicit lists, `[]` allowed); `item transition CR-001 completed` refuses on the same criteria. Every requirement in `affected_items` needs a `verification_method`, and one declaring `Test` needs passing JUnit evidence for each declared test point.
 
-`verify dhf` checks the rest: every item in `affected_items` exists, and a CR whose status is `completed` and that no REL lists yet carries those same fields, the criteria on that transition in `cr.yaml` (by default the four marked ✓ above), which `item transition CR-NNN completed` refuses on too. It is a warning, and an error under `--strict`; a project that changes the criteria there changes this check. A CR planned by hand records the fields with `medharness item update`.
+Approval is not their question. During development it is the review of the pull request, under your team's rules. At release the documents are signed and [`verify approval --release`](ci.md#signing-a-release) checks that.
 
-Approval is not their question. During development it is the review of the pull request, under your team's rules, and no check reads it; at release the documents are signed and [`verify approval --release`](ci.md#signing-a-release) checks that.
+## Wiring it into GitHub Actions
 
-### Wiring it into GitHub Actions
-
-MedHarness does not interpret GitHub events; the workflow's own `if:` does. A
-sketch, with branches named `design/CR-NNN` and `develop/CR-NNN`:
+MedHarness does not interpret GitHub events; the workflow's own `if:` does. A sketch, with branches named `design/CR-NNN` and `develop/CR-NNN`:
 
 ```yaml
 on:
@@ -180,44 +144,10 @@ jobs:
           esac
 ```
 
-**Make `build code` pass your tests.** `--check CMD` (repeatable) names the commands the
-code must pass. The model is told to run them and fix until they exit 0; when it is done,
-MedHarness runs them itself and sends a failure back for a fix (two attempts). If one still
-fails, the run exits non-zero, `checks` in the answer says which, and `--pr` pushes nothing.
-A command that cannot run counts as failed (exit 127), so the job needs the project's
-toolchain installed: without it the model can only guess, and the run fails instead of
-shipping the guess. Without `--check`, the model finds the commands in `AGENTS.md` or
-`CLAUDE.md` and nothing enforces them.
+- **Check out full history** (`fetch-depth: 0`) wherever a job runs `build plan|code`: they compare the branch with where it left its base, and a shallow clone cannot reach it. The base is the PR's target branch with `--pr`, otherwise `origin`'s HEAD, else `origin/main`; `--since-ref REF` overrides it.
+- **Make `build code` pass your tests.** `--check CMD` (repeatable) names commands the code must pass. MedHarness runs them itself when the model is done and sends a failure back for a fix (two attempts); if one still fails the run exits non-zero and `--pr` pushes nothing. The job needs the project's toolchain installed. Without `--check`, nothing enforces the commands.
+- **An issue is the agent's instructions.** `intake` turns an issue's title and body into the CR, so label only issues whose text you would hand to an agent with a shell. PRs opened with `github.token` start no workflows: give `gh pr create` another token if the PR's own checks should run.
+- **`--pr` is CI; without it, local.** Without `--pr` the stages change files and commit nothing. With `--pr N` they revise when a reviewer has asked for changes on the PR's current commit, then commit and push to its branch; the job needs git's user configured and a token that can push. The agent never commits: if it does anyway, its commits are undone, the changes kept, and the answer carries an `agent_commits_undone` warning.
+- `artifacts.items_changed` and `files_changed` are the whole branch against its base, not what one run added. `build plan` records `items_changed` as the CR's `affected_items`.
 
-**Check out full history** (`fetch-depth: 0`) wherever a job runs `build plan|code`:
-they compare the branch with where it left its base, and a shallow clone cannot reach that point
-(the run stops with git's own reason). The base is found, not configured: with `--pr` the PR's
-target branch, otherwise the branch `origin`'s HEAD points at, else `origin/main`. `--since-ref REF`
-overrides it, for a change cut from a release branch; the answer's `inputs.since_ref` says which
-was used. A `pull_request_review` run also uses the workflow file of the PR's head commit, so a branch cut before you fixed
-the workflow keeps the old one until you update it with `main`.
-
-**An issue is the agent's instructions.** `intake` turns the issue's title and
-body into the CR that `build plan` works from, so label only issues whose text
-you would hand to an agent with a shell — adding a label already needs triage
-access. PRs opened with `github.token` start no workflows, so give `gh pr create`
-another token if the PR's own checks should run on it.
-
-**`--pr` is CI; without it, local.** Without `--pr`, `build plan` and `build
-code` change files in the working tree and commit nothing — at your desk, or in
-a job that commits itself, like `start` above. With `--pr N` they revise when a
-reviewer has asked for a change on the PR's current commit — an approval asks for
-nothing — and commit and push the
-result to its branch; the job needs git's user configured and a token that can
-push. Either way the agent does not commit: if it does anyway — a repository's
-`CLAUDE.md` may tell it to — its commits are undone, their changes kept, and the
-answer carries an `agent_commits_undone` warning.
-
-`artifacts.items_changed` and `artifacts.files_changed` are the branch against
-its base, committed or not — the CR's whole change set across every run,
-not what this run added. `build plan` records `items_changed` as the CR's
-`affected_items`.
-
-`build plan` and `build code` need the model's credentials in the job's
-environment — see [ai-security.md](ai-security.md) before giving them to a
-runner.
+`build plan` and `build code` need the model's credentials in the job's environment: read [ai-security.md](ai-security.md) before giving them to a runner.

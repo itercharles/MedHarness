@@ -11,6 +11,13 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.81.1] — 2026-11-19
+
+### Changed
+- `docs/soup.md`, `docs/configuration.md`, `docs/adopting.md`, `docs/ai-workflow.md` and `docs/ci.md` are shorter and in the order a reader does things; what only an agent needs is left to the code and `interface.md`. Their commands, examples and linked anchors are unchanged.
+- The adoption table lists the CI recipe's `change-check` job as its own step.
+- A roadmap review, `docs/reviews/2026-11-19-positioning-gaps-plan.md`: positioning, gaps and ordered tasks.
+
 ## [0.81.0] — 2026-11-13
 
 What a new user ran into setting up a project, fixed.

@@ -12,55 +12,41 @@ How to take MedHarness into a project, and where each part is documented.
 
 ## Starting fresh
 
-Run `medharness init` as in the [README](../README.md#quick-start). Then replace:
+Run `medharness init` as in the [README](../README.md#quick-start), then replace:
 
 | Replace | Why |
 |---------|-----|
-| `DHF/items/` | Delete the sample YAML and add your own, or keep them while you learn the schema |
-| `DHF/config/global.yaml` | Check the project name. Anything else you set here overrides a default — see [Changing the defaults](configuration.md#changing-the-defaults) |
-| `AGENTS.md` | Describe the product, so every coding agent — and the AI stages — reason about your domain |
+| `DHF/items/` | The sample items. Delete them and add your own, or keep them while you learn the schema |
+| `DHF/config/global.yaml` | Check the project name. Anything else you set here overrides a default ([Configuration](configuration.md#changing-the-defaults)) |
+| `AGENTS.md` | Describe the product, so every coding agent, and the AI stages, reason about your domain |
 
-CI is the one piece you add yourself, and it is the whole deployment.
+CI is the one piece you add yourself ([CI and releases](ci.md#setting-up-ci)).
 
 ## Bringing an existing DHF
 
-MedHarness stores DHF content as YAML items, one file per record. The types and
-the links between them are listed in the `DHF/README.md` that `init` writes.
+One YAML file per item; the types and links are listed in the `DHF/README.md` that `init` writes. A requirements spreadsheet becomes SYS and SRS items, one row per item. A risk register becomes RISK items with RCM items that `mitigates` them. A SOUP list becomes SOUP items. Test code stays in pytest, and generated documents come from `build release`.
 
-Artifacts from common sources map directly to item types. A requirements spreadsheet becomes SRS and SYS items — one row per item, with `title` and `content` fields. A risk register becomes RISK items paired with RCM items (each RCM carries a `mitigates` field pointing to the RISK ID it controls). A SOUP list becomes SOUP items with `name`, `version`, and `purpose` fields.
-
-What you do not need to migrate: test code (it stays in pytest, linked to DHF items via `medharness.links` annotations in JUnit output), generated documents (`build release` renders them from the items), and CI scripts (start from the recipe in [Setting up CI](ci.md#setting-up-ci)). Migration is writing YAML files. The schema is self-documenting — look at the sample items from `init` to see every field and its expected values.
-
-Traceability links between items are typed fields on child items (`derives_from`, `satisfies`, `implements`, `mitigates`, etc.). Run `medharness --dhf DHF verify dhf` at any point to check link integrity. The validator names the exact item, field, and target for every broken link.
-
-Which findings block a build and which only warn is in
-[interface.md](interface.md#what-blocks-a-build). While backfilling, leave
-`--strict` off: coverage gaps then warn, and schema, required links
-and dangling links still fail.
+Run `medharness --dhf DHF verify dhf` as you go: it names the item, field and target of every broken link. While backfilling, leave `--strict` off, so coverage gaps warn and only schema, required links and dangling links fail ([what blocks a build](interface.md#what-blocks-a-build)).
 
 ### Change requests you already have
 
-A DHF that kept change requests before MedHarness's closure criteria existed has two things to settle once, before its first release.
+Settle two things once, before the first release.
 
-**A status that is no state of the type.** A CR written as `implementing` fails `verify dhf`: a CR's states are `new`, `design`, `develop`, `completed`, `rejected` and `cancelled`. Set each to what it really is — `develop` for work in flight, `completed` or `cancelled` for work that finished or stopped:
+**A status that is no state of the type.** A CR written as `implementing` fails `verify dhf`. Set each to what it is: `develop` for work in flight, `completed` or `cancelled` for work that finished or stopped.
 
 ```bash
 medharness --dhf DHF item update CR-004 --data '{"status": "develop"}'
 ```
 
-**Completed CRs that never recorded their closure.** `build release` asks again what closing a CR asked (the criteria of its move to `completed`, and passing tests for what it changed) of every completed CR it includes, by default every completed CR not yet in a release, so CRs closed before `implementation_notes`, `affected_items` and `triage_result` existed fail it. Do not backfill those fields: a triage approval written years later is not a record of anything. Baseline the history instead. A REL item that lists those CRs in `included_items` takes them out of the default, and the decision is a reviewable change in your DHF:
+**Completed CRs that never recorded their closure.** `build release` asks every completed CR it includes for what closing one asks. Do not backfill those fields: a triage approval written years later records nothing. Baseline the history instead. A REL item listing those CRs in `included_items` takes them out of the default, as a reviewable change:
 
 ```bash
 medharness --dhf DHF item create --type REL --data '{"title": "Baseline of change requests completed before closure records", "version": "baseline", "included_items": ["CR-003", "CR-005"], "release_notes": "Completed before the closure criteria existed; accepted as they are."}'
 ```
 
-CRs completed from then on carry the closure fields, and the next `build release` includes only them. `verify dhf` stops asking a completed CR for those fields once a REL lists it, so the baseline also keeps `verify dhf --strict`, which a release runs, from failing on the history.
+## Test points
 
-## Test-driven development with test points
-
-MedHarness supports TDD at the DHF level. The idea is that test intent is expressed in the design, not retrofitted after code is written.
-
-Each requirement (CRS, SYS, SRS) has a `testing` field where you write numbered test points at design time:
+A requirement's `testing` field holds numbered test points, written at design time:
 
 ```yaml
 id: SRS-012
@@ -69,80 +55,55 @@ content: "The system shall reject passwords shorter than 12 characters."
 testing: |
   T1: Given a password of 11 characters, registration returns a validation error.
   T2: Given a password of exactly 12 characters, registration succeeds.
-  T3: Given a password of 13+ characters, registration succeeds.
 ```
 
-During implementation, tests declare which points they cover:
+Tests declare what they cover:
 
 ```python
-# Python — pytest marker
 @pytest.mark.dhf_links("SRS-012")
-@pytest.mark.dhf_testing("T1", "T2", "T3")
-def test_password_length_validation():
-    ...
+@pytest.mark.dhf_testing("T1", "T2")
+def test_password_length_validation(): ...
 ```
 
 ```javascript
-// JS/Jest — embedded tag in the test name
 test("rejects short password @links:SRS-012 @testing:T1", () => { ... });
-test("accepts 12-char password @links:SRS-012 @testing:T2", () => { ... });
 ```
 
-Under pytest with `--junit-xml`, the markers become JUnit properties (`medharness.links`, `medharness.testing`); other runners carry the tags in the test name. The CI gate reads either:
-
-```bash
-medharness --dhf DHF verify tests --junit test-results
-```
-
-This exits non-zero if a requirement lacks coverage or if any declared test point has no covering test, making gaps in test coverage visible before merge. Combined with `verify dhf` (schema and links), it enforces that requirements are linked and verified before merge.
+Under pytest with `--junit-xml` the markers become JUnit properties; other runners carry the tags in the test name. `medharness --dhf DHF verify tests --junit test-results` fails when a requirement, or a declared test point, has no covering test.
 
 ## What to adopt, in what order
 
-Start with the AI development, and add the checks that make it trustworthy. Each
-step is useful on its own.
+Start with the AI development, and add the checks that make it trustworthy. Each step is useful on its own.
 
 | Step | Add | Needs |
 |------|-----|-------|
 | 1 | Your coding agent follows the process: `init` writes `AGENTS.md`, and the agent runs `build plan --prompt` and `build code --prompt` | A coding agent you already use. No key, nothing in CI |
-| 2 | `verify dhf` as a PR gate | Nothing — works on day one. It is what checks the design the agent wrote |
-| 3 | Unattended AI in CI: `build plan` and `build code` from an issue | An AI key, an ephemeral runner, and branch protection that requires an approving review. Put it behind step 2 |
-| 4 | `verify tests` | Test annotations in JUnit output |
+| 2 | `verify dhf` as a PR gate | Nothing. It checks the design the agent wrote |
+| 3 | `verify impact` and `verify tests --cr` on change-request branches (the recipe's `change-check` job) | Test annotations in JUnit output |
+| 4 | Unattended AI in CI: `build plan` and `build code` from an issue | An AI key, an ephemeral runner, and branch protection that requires an approving review. Put it behind step 2 |
 | 5 | `build soup`, `verify soup` | A dependency manifest |
-| 6 | `build release` on version tags | Steps 2, 4 and 5 passing |
+| 6 | `build release` on version tags | Steps 2, 3 and 5 passing |
 
-Steps 1 and 3 are optional in the strong sense: a team that writes its DHF by hand
-starts at step 2 and loses nothing the standard asks for.
+A team that writes its DHF by hand starts at step 2 and loses nothing the standard asks for.
 
-## Installing a validated configuration
+## Validating your installation
 
-Every MedHarness release runs its full test suite before it is published, against the exact dependency versions in the release's lockfile. The GitHub Release attaches three files that record that run:
-
-| File | What it is |
-|------|------------|
-| `medharness-<version>-tested-with.txt` | A pip constraints file: every runtime and `docs` dependency, pinned to the version the suite passed with |
-| `medharness-<version>-junit.xml` | The JUnit results of the full suite |
-| `medharness-<version>-test-summary.txt` | The pytest summary line, Python version, runner image and commit |
-
-To install that configuration, pass the constraints file to pip:
+Every release runs its full test suite against the dependency versions in its lockfile, and attaches the evidence to the GitHub Release: `medharness-<version>-tested-with.txt` (a pip constraints file), `-junit.xml` and `-test-summary.txt`. To install that configuration:
 
 ```bash
 pip install "medharness[docs]==<version>" -c medharness-<version>-tested-with.txt
 ```
 
-The `==` pins MedHarness itself; the constraints pin everything it pulls in, so an install done later resolves to the versions the suite ran against rather than the newest ones on PyPI. The JUnit file and the test summary are the evidence of what that configuration passed. Keep them with your release records.
-
-## Validating your installation
-
-The release's evidence shows the suite passed where MedHarness was built. To show the copy you installed behaves the same in your environment, run:
+That shows the suite passed where MedHarness was built. To show your copy behaves the same in your environment:
 
 ```bash
 medharness build validation --out-dir validation
 ```
 
-It runs the validation set that ships in the package against a scratch project in a temporary directory, never your DHF, and writes `validation/validation-report.html` (`--doc-format pdf` with the `docs` extra). The report gives the result, `passed`, `failed` or `incomplete`; the installed files checked against the release; each installed dependency beside the version the release was tested with; your platform, Python, `git` and `ssh-keygen`; and, for each high-risk requirement of MedHarness's own DHF, every test point with the case that exercised it and its result. It ends with blank fields for who performed and reviewed the validation. The command exits 0 only when the result is `passed`. A run takes about half a minute on four cores: `--jobs N` sets how many cases run at once (default: the number of CPUs, at most 8), and `--jobs 1` runs them one after another, with the same result.
+It runs the validation set that ships in the package against a scratch project, never your DHF, and writes `validation/validation-report.html` (`--doc-format pdf` with the `docs` extra). The report gives `passed`, `failed` or `incomplete`; the installed files checked against the release; each dependency beside its tested version; your platform; and, for each high-risk requirement of MedHarness's own DHF, every test point and its result. It ends with blank fields for who performed and reviewed it. The command exits 0 only on `passed`, and takes about half a minute on four cores (`--jobs N`).
 
-- **A dependency at another version** is listed as a deviation, not a failure. Whether it matters is your assessment; the results show whether the tool behaves with it.
-- **A missing `ssh-keygen`** leaves the signing points not run, and the result `incomplete`: a validation that skipped them has not validated signing.
-- **An install from a source checkout or in editable mode** carries no release record and cannot be checked file by file, so its result is `incomplete`. Validate the wheel you install from PyPI.
+- **A dependency at another version** is a deviation, not a failure. Whether it matters is your assessment.
+- **A missing `ssh-keygen`** leaves the signing points not run, so the result is `incomplete`.
+- **An install from a source checkout or in editable mode** cannot be checked file by file, so it is `incomplete`. Validate the wheel you install from PyPI.
 
-Run it where MedHarness makes the decisions you rely on: on the CI runner that runs your gates and `build release`, or in the same image, and on any machine where people run gates or sign releases. Run it when you adopt a version, again after every upgrade, and when that environment changes in a way that matters, such as a new operating system or Python version. The changelog and the requirement IDs in the report show which gates changed. File the report with the release's JUnit and test summary: each point in your report has the same requirement ID, test point and case name as in the vendor's run. The decision that MedHarness is fit for your intended use, and the signature, are yours ([ADR-005](adr/ADR-005-installation-validation.md)).
+Run it on the CI runner that runs your gates and `build release`, and where people sign releases. Run it when you adopt a version, after every upgrade, and when the environment changes (operating system, Python). File the report with the release's JUnit and test summary. Deciding that MedHarness is fit for your intended use, and signing, are yours ([ADR-005](adr/ADR-005-installation-validation.md)).
