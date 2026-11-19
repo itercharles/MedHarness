@@ -21,7 +21,7 @@ product does is not finished until its DHF is.
 
 ## Rules
 
-- Read and write the DHF with `medharness item list|get|create|update|transition`, never by editing
+- Read and write the DHF with `medharness item list|get|create|update|transition|transitions`, never by editing
   the files under `DHF/`: the commands check the schema, allocate IDs and change only the fields given.
 - A long value (a CR's `impact_analysis`) is easier to write to a file and pass as `--data @fields.json`
   than to quote inline; `--data -` reads standard input.
@@ -29,5 +29,5 @@ product does is not finished until its DHF is.
   describe a check as passing before it has.
 - Work locally. Do not push, open an issue or a pull request, set a milestone, or start a workflow unless
   you are asked to use CI: the commands change local files by default, and `--pr` is what reaches a pull request.
-- A CR's states are the project's (`medharness item transition CR-NNN` lists where it can go). Move it when
+- A CR's states are the project's (`medharness item transitions CR-NNN` lists where it can go). Move it when
   you start designing; a move that means "approved" (the design, the code) is made only when the user says so.

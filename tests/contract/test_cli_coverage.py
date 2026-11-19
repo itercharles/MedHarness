@@ -81,7 +81,7 @@ class TestBuildRelease:
         junit = verify_the_starter(scaffolded_dhf / "DHF", tmp_path / "tr")
         r = _run(
             "medharness", "--dhf", str(scaffolded_dhf / "DHF"),
-            "build", "release", "--version", "1.0.0", "--out-dir", str(out_dir), "--junit", str(junit),
+            "build", "release", "--release", "1.0.0", "--out-dir", str(out_dir), "--junit", str(junit),
         )
         assert r.returncode == 0, r.stderr
         data = json.loads(r.stdout)
@@ -106,7 +106,7 @@ class TestBuildRelease:
 
         r = _run(
             "medharness", "--dhf", str(dhf),
-            "build", "release", "--version", "1.0.0", "--out-dir", str(out_dir), "--write",
+            "build", "release", "--release", "1.0.0", "--out-dir", str(out_dir), "--write",
             "--junit", str(verify_the_starter(dhf, tmp_path / "tr")),
         )
         assert r.returncode == 1

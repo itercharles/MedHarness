@@ -212,7 +212,7 @@ def register(main):
     @click.option("--strict", is_flag=True, default=False,
                   help="Make an undocumented or misversioned component fail the gate. "
                        "Warns by default, so a project backfilling its register is not blocked.")
-    @click.option("--offline-mode", type=click.Choice(["fail", "warn"]), default="fail",
+    @click.option("--on-unreachable", type=click.Choice(["fail", "warn"]), default="fail",
                   help="Behaviour when osv.dev is unreachable. 'warn' keeps the gate "
                        "passing for air-gapped or proxy-restricted pipelines.")
     @click.pass_context
@@ -220,7 +220,7 @@ def register(main):
         ctx: click.Context,
         manifest_paths: tuple[Path, ...],
         strict: bool,
-        offline_mode: str,
+        on_unreachable: str,
     ) -> None:
         """Check the SOUP register matches what ships, and is not known-vulnerable.
 
@@ -245,7 +245,7 @@ def register(main):
         from medharness.services.verify_soup import soup_gate
 
         effective_dhf = ctx.obj["dhf"]
-        result = soup_gate(effective_dhf, offline_mode=offline_mode,
+        result = soup_gate(effective_dhf, on_unreachable=on_unreachable,
                            manifest_paths=list(manifest_paths), strict=strict)
         emit(result)
 

@@ -4,8 +4,8 @@ content: '`item update` shall refuse a `status` different from the item''s curre
   one when the item''s type has a lifecycle, pointing to `item transition`, except
   to repair a status that is no state of the type, so that a lifecycle''s criteria
   cannot be skipped by writing the field.'
-verification_criteria: The exit code is 1, stderr names `item transition <ID>` and
-  the item's status and file are unchanged. Restating the current status is accepted,
+verification_criteria: The exit code is 1, stderr names `item transition <ID> <state>`
+  and the item's status and file are unchanged. Restating the current status is accepted,
   and so is writing a real state over one that is no state of the type.
 testing: 'T1: An update setting a CR''s status to another state of its type is refused
   and the CR stays where it was.

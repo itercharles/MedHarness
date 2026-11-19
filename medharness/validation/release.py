@@ -30,7 +30,7 @@ def placeholder_starter(root: Path) -> None:
 
 
 def _release(root: Path, *args: str, version: str = "1.0.0", results: Path | None = None) -> tuple[int, dict, str]:
-    return invoke(root, "build", "release", "--version", version, "--out-dir", str(root / "out" / version),
+    return invoke(root, "build", "release", "--release", version, "--out-dir", str(root / "out" / version),
                   "--junit", str(results or root / "results" / "junit.xml"), *args)
 
 
@@ -164,7 +164,7 @@ def verified_requirements_release(root: Path) -> None:
 
 
 def junit_is_required(root: Path) -> None:
-    code, _, stderr = invoke(root, "build", "release", "--version", "1.0.0", "--out-dir", str(root / "out"))
+    code, _, stderr = invoke(root, "build", "release", "--release", "1.0.0", "--out-dir", str(root / "out"))
     check(code == 2 and "--junit" in stderr, f"exited {code}; stderr: {stderr[-300:]!r}")
 
 

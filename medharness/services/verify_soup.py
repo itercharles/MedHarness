@@ -111,7 +111,7 @@ def _drift_messages(drift: dict) -> list[str]:
 def soup_gate(
     dhf_path: Path,
     *,
-    offline_mode: str = "fail",
+    on_unreachable: str = "fail",
     manifest_paths: list[Path] | None = None,
     strict: bool = False,
     query: Callable[[list[dict]], list[dict]] = osv_querybatch,
@@ -141,7 +141,7 @@ def soup_gate(
     ``osv_vuln``; a test passes its own.
 
     Args:
-        offline_mode: ``"fail"`` (default) treats an unreachable osv.dev as a gate
+        on_unreachable: ``"fail"`` (default) treats an unreachable osv.dev as a gate
             failure. ``"warn"`` reports the outage but leaves the gate passing, for
             air-gapped or proxy-restricted pipelines where the scan runs elsewhere.
 
@@ -253,11 +253,11 @@ def soup_gate(
                                    f"was refused by osv.dev (HTTP {one.code}) and not checked — "
                                    f"is the ecosystem spelt as osv.dev names it (PyPI, npm, Go, …)?")
     except OSError as exc:
-        tolerated = offline_mode == "warn"
+        tolerated = on_unreachable == "warn"
         outage = f"osv.dev unreachable: {exc}"
         return outcome(tolerated, (
             f"SOUP vulnerability scan skipped — osv.dev unreachable ({exc}). "
-            "Gate tolerated the outage (--offline-mode warn); scan SOUP through "
+            "Gate tolerated the outage (--on-unreachable warn); scan SOUP through "
             "your offline process to keep IEC 62304 §8.1.2 evidence complete."
             if tolerated
             else f"SOUP vulnerability check failed: {exc}"

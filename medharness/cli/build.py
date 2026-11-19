@@ -196,7 +196,7 @@ def register(main):
         _raise_for_outcome_error(result)
 
     @build.command("release")
-    @click.option("--version", "version", required=True, metavar="VERSION",
+    @click.option("--release", "version", required=True, metavar="VERSION",
                   callback=_check_version, help="The version being released, e.g. 1.2.0.")
     @click.option("--out-dir", required=True, type=click.Path(file_okay=False, path_type=Path),
                   help="Where to write the baseline, BOM, SBOM and evidence bundle.")

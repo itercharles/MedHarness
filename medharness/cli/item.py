@@ -69,7 +69,7 @@ def register(main):
                   help="Keep items where every word of TEXT occurs, case-insensitively, in any text field.")
     @click.option("--linked-to", "linked_to", default=None, metavar="ID",
                   help="Keep items that link to ID or that ID links to.")
-    @click.option("--brief", is_flag=True, help="Print only id, type, title and links.")
+    @click.option("--brief", is_flag=True, help="Print only id, type, title, status and all_linked_ids.")
     @click.pass_context
     def item_list(ctx: click.Context, doc_type: str | None, match: str | None,
                   linked_to: str | None, brief: bool) -> None:
@@ -95,7 +95,7 @@ def register(main):
         for it in items:
             if brief:
                 it = {"id": it["id"], "type": it.get("type", ""), "title": it.get("title", ""),
-                      "links": it.get("all_linked_ids") or []}
+                      "status": it.get("status"), "all_linked_ids": it.get("all_linked_ids") or []}
             click.echo(json.dumps(it, default=str))
         click.echo(f"({len(items)} item(s))", err=True)
 
@@ -137,26 +137,32 @@ def register(main):
         click.echo(f"✓ Updated {item_id}.", err=True)
 
 
+    @item.command("transitions")
+    @click.argument("item_id")
+    @click.pass_context
+    def item_transitions(ctx: click.Context, item_id: str) -> None:
+        """List where an item can move, and what blocks each move."""
+        adapter = open_store(ctx.obj["dhf"])
+        it = adapter.get_item(item_id)
+        if it is None:
+            raise click.ClickException(f"Item '{item_id}' not found.")
+        dt = adapter.config.doc_type_of(item_id)
+        if dt and not dt.lifecycle:
+            raise click.ClickException(f"{dt.code} has no lifecycle: {item_id} has no status to move.")
+        click.echo(json.dumps({
+            "id": item_id,
+            "status": it.get("status"),
+            "transitions": adapter.get_available_transitions(item_id),
+        }, default=str))
+
+
     @item.command("transition")
     @click.argument("item_id")
-    @click.argument("to_state", required=False)
+    @click.argument("to_state")
     @click.pass_context
-    def item_transition(ctx: click.Context, item_id: str, to_state: str | None) -> None:
-        """Move an item to TO_STATE, or list where it can go when TO_STATE is omitted."""
+    def item_transition(ctx: click.Context, item_id: str, to_state: str) -> None:
+        """Move an item to TO_STATE."""
         adapter = open_store(ctx.obj["dhf"])
-        if to_state is None:
-            it = adapter.get_item(item_id)
-            if it is None:
-                raise click.ClickException(f"Item '{item_id}' not found.")
-            dt = adapter.config.doc_type_of(item_id)
-            if dt and not dt.lifecycle:
-                raise click.ClickException(f"{dt.code} has no lifecycle: {item_id} has no status to move.")
-            click.echo(json.dumps({
-                "item_id": item_id,
-                "current_status": it.get("status"),
-                "transitions": adapter.get_available_transitions(item_id),
-            }, default=str))
-            return
         try:
             result = adapter.execute_transition(item_id, to_state)
         except ValueError as e:

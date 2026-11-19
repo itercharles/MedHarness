@@ -23,9 +23,9 @@ ROOT = Path(__file__).resolve().parents[2]
 
 #: Options that take a value, so the token after them is not a subcommand.
 VALUE_FLAGS = {
-    "--dhf", "--out-dir", "--junit", "--cr", "--version", "--dependency-file",
+    "--dhf", "--out-dir", "--junit", "--cr", "--release", "--dependency-file",
     "--output", "--approver", "--reviews-dir", "--project-dir", "--type",
-    "--requirement-type", "--since-ref", "--code-path", "--offline-mode",
+    "--requirement-type", "--since-ref", "--code-path", "--on-unreachable",
     "--coverage-pair", "--junit", "--doc-format", "--data", "--author", "--stage",
     "--project-name", "--event", "--github-output", "--token", "--pr",
 }

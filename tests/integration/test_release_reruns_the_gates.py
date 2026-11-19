@@ -38,7 +38,7 @@ CLOSED = {"implementation_notes": "n", "affected_risk_items": []}
 
 def _release(dhf: Path, *extra: str, junit: Path | None = None):
     junit = junit or verify_the_starter(dhf, dhf.parent / "test-results")
-    result = CliRunner().invoke(main, ["--dhf", str(dhf), "build", "release", "--version", "1.0.0",
+    result = CliRunner().invoke(main, ["--dhf", str(dhf), "build", "release", "--release", "1.0.0",
                                        "--out-dir", str(dhf.parent / "rel"), "--junit", str(junit), *extra])
     return result, ReleaseReport.model_validate_json(result.stdout.splitlines()[0])
 
@@ -89,7 +89,7 @@ def test_every_requirement_must_be_verified_by_the_junit_given(tmp_path: Path) -
 @pytest.mark.dhf_testing("T3")
 def test_a_release_without_junit_is_refused(tmp_path: Path) -> None:
     dhf = _project(tmp_path, **CLOSED, affected_items=[])
-    result = CliRunner().invoke(main, ["--dhf", str(dhf), "build", "release", "--version", "1.0.0",
+    result = CliRunner().invoke(main, ["--dhf", str(dhf), "build", "release", "--release", "1.0.0",
                                        "--out-dir", str(tmp_path / "rel")])
     assert result.exit_code == 2 and "--junit" in result.output
 

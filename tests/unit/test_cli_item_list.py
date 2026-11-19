@@ -110,11 +110,11 @@ class TestRetrievalOptions:
         assert r.exit_code == 1 and ids == []
         assert "Item 'SYS-999' not found." in r.stderr
 
-    def test_brief_prints_four_keys(self, dhf: Path) -> None:
+    def test_brief_prints_five_keys(self, dhf: Path) -> None:
         r, _ = self._list(dhf, "--brief", "--type", "SRS")
         rows = _parse_lines(r.stdout)
-        assert all(set(row) == {"id", "type", "title", "links"} for row in rows)
-        assert rows[0] == {"id": self.srs_a, "type": "SRS", "title": "PDF layout", "links": [self.sys_a]}
+        assert all(set(row) == {"id", "type", "title", "status", "all_linked_ids"} for row in rows)
+        assert rows[0] == {"id": self.srs_a, "type": "SRS", "title": "PDF layout", "status": None, "all_linked_ids": [self.sys_a]}
 
     def test_items_come_in_id_order_numbers_compared_as_numbers(self, dhf: Path) -> None:
         srs_dir = next((dhf / "items").glob("*_srs"))

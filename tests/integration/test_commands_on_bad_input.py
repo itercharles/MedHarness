@@ -4,7 +4,7 @@ These run the real CLI against a scaffolded project. They are the tests that
 matter most: a defect in any helper shows up here, as a wrong exit code, a
 missing reason, or a file changed when it should not have been. Two were found
 by writing them — `--data '[1]'` crashed `item create` and `item update`, and
-`build release --version ''` was accepted.
+`build release --release ''` was accepted.
 """
 
 from __future__ import annotations
@@ -48,7 +48,7 @@ class TestItemCommands:
     @pytest.mark.parametrize("args,reason", [
         (["get", "NOPE-1"], "not found"),
         (["update", "NOPE-1", "--data", "{}"], "not found"),
-        pytest.param(["transition", "NOPE-1"], "not found",
+        pytest.param(["transitions", "NOPE-1"], "not found",
                      marks=[pytest.mark.dhf_links("SRS-060"), pytest.mark.dhf_testing("T4")]),
         pytest.param(["create", "--type", "ZZZ", "--data", "{}"], "Unknown doc type",
                      marks=[pytest.mark.dhf_links("SRS-055"), pytest.mark.dhf_testing("T4")]),
@@ -166,16 +166,22 @@ class TestBuildArguments:
     def test_a_release_version_that_cannot_name_a_file_is_refused(
         self, project: Path, version: str,
     ) -> None:
-        result = _run(project, "build", "release", "--version", version, "--out-dir", str(project / "r"),
+        result = _run(project, "build", "release", "--release", version, "--out-dir", str(project / "r"),
                       "--junit", str(project / "DHF"))
         assert result.exit_code == 2
         assert not (project / "r").exists() and not (project.parent / "evil").exists()
+
+    def test_the_version_of_a_release_is_named_release_not_version(self, project: Path) -> None:
+        result = _run(project, "build", "release", "--version", "1.0.0", "--out-dir", str(project / "r"),
+                      "--junit", str(project / "DHF"))
+        assert result.exit_code == 2 and "No such option: --version" in result.stderr
+        assert not (project / "r").exists()
 
     def test_a_release_without_write_leaves_the_dhf_alone(self, project: Path) -> None:
         keep_the_starter_text(project / "DHF")
         junit = verify_the_starter(project / "DHF", project / "tr")
         before = {p: p.read_bytes() for p in (project / "DHF").rglob("*.yaml")}
-        result = _run(project, "build", "release", "--version", "1.0.0", "--out-dir", str(project / "r"),
+        result = _run(project, "build", "release", "--release", "1.0.0", "--out-dir", str(project / "r"),
                       "--junit", str(junit))
         assert result.exit_code == 0 and ReleaseReport.model_validate_json(result.stdout).rel_id is None
         assert {p: p.read_bytes() for p in (project / "DHF").rglob("*.yaml")} == before

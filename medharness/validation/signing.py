@@ -74,7 +74,7 @@ class Project:
         self.junit = verify_the_starter(self.dhf, self.root / "test-results")
 
     def release(self, version: str = "1.0.0", *extra: str):
-        result = self.run("build", "release", "--version", version, "--out-dir", str(self.root / "rel" / version),
+        result = self.run("build", "release", "--release", version, "--out-dir", str(self.root / "rel" / version),
                           "--junit", str(self.junit), "--write", *extra)
         check(result.exit_code == 0, f"build release {version} failed: {result.stderr[-500:]}")
         return result

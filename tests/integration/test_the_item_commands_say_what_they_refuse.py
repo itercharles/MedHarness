@@ -53,7 +53,7 @@ def test_an_item_with_no_lifecycle_is_told_so(project: Path) -> None:
     before = _snapshot(project)
 
     moved = _run("item", "transition", "SRS-001", "draft")
-    asked = _run("item", "transition", "SRS-001")
+    asked = _run("item", "transitions", "SRS-001")
 
     for result in (moved, asked):
         assert result.exit_code == 1 and result.stdout == ""

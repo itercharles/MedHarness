@@ -116,7 +116,7 @@ jobs:
           VERSION: ${{ steps.ver.outputs.version }}
         run: |
           medharness --dhf DHF build release \
-            --version "$VERSION" \
+            --release "$VERSION" \
             --out-dir artifacts \
             --junit test-results \
             --write
@@ -165,7 +165,7 @@ Writing your own pipeline instead? [interface.md](interface.md) is the contract:
 ## Cutting a release
 
 ```bash
-medharness --dhf DHF build release --version 1.2.0 --out-dir release --junit test-results
+medharness --dhf DHF build release --release 1.2.0 --out-dir release --junit test-results
 ```
 
 One command builds everything a release needs into one directory: the release baseline, the software BOM, a CycloneDX SBOM, the specifications, a traceability report per matrix, test evidence, and `evidence-manifest.json` hashing every file. `--junit` is required: every requirement must be verified by it.
@@ -183,7 +183,7 @@ Before it writes anything to the DHF, it checks that:
 When the project keeps `DHF/config/approvers.yaml` (each person with their roles and public keys), a release is signed before it is issued. `approval_roles` and `release_role` in `global.yaml` say which role owns which specification. Without that file none of this applies ([ADR-004](adr/ADR-004-signed-approvals.md)).
 
 ```bash
-medharness --dhf DHF build release --version 1.2.0 --out-dir release --junit test-results --write
+medharness --dhf DHF build release --release 1.2.0 --out-dir release --junit test-results --write
 medharness --dhf DHF item approve --release 1.2.0 --key ~/.ssh/id_ed25519_sk
 medharness --dhf DHF verify approval --release 1.2.0
 medharness --dhf DHF build approvals --release 1.2.0 --out-dir release

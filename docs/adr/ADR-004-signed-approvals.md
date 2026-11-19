@@ -145,7 +145,7 @@ An agent working locally runs as the user and can reach the user's ssh-agent.
 
 ### Commands and the release flow
 
-1. **The release pipeline runs `build release --version V ... --write`.** It runs today's
+1. **The release pipeline runs `build release --release V ... --write`.** It runs today's
    checks, writes the manifest and the change report, and records the REL item as `draft`.
    The pipeline opens a release pull request with them.
 2. **Each signer runs `medharness item approve --release V --key <KEY>`.** It shows the

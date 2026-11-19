@@ -63,7 +63,7 @@ def test_the_manifest_is_written_without_an_approvers_list_too(tmp_path: Path) -
 def test_the_release_is_recorded_as_a_draft_for_the_signatures_to_cover(tmp_path: Path) -> None:
     project = _released(tmp_path)
 
-    report = json.loads(project.run("build", "release", "--version", "1.0.1", "--out-dir", str(project.root / "rel" / "1.0.1"),
+    report = json.loads(project.run("build", "release", "--release", "1.0.1", "--out-dir", str(project.root / "rel" / "1.0.1"),
                                     "--junit", str(project.junit), "--write").stdout.splitlines()[0])
 
     assert yaml.safe_load(project.item_file(report["rel_id"]).read_text())["status"] == "draft"
@@ -74,9 +74,9 @@ def test_the_release_is_recorded_as_a_draft_for_the_signatures_to_cover(tmp_path
 def test_a_dry_run_and_a_failed_release_write_nothing_into_the_dhf(tmp_path: Path) -> None:
     project = build_project(tmp_path)
     project.ready_to_release()
-    dry = project.run("build", "release", "--version", "1.0.0", "--out-dir", str(project.root / "rel"), "--junit", str(project.junit))
+    dry = project.run("build", "release", "--release", "1.0.0", "--out-dir", str(project.root / "rel"), "--junit", str(project.junit))
     project.edit("CR-001", status="design")
-    failed = project.run("build", "release", "--version", "1.0.0", "--cr", "CR-001", "--out-dir", str(project.root / "rel"),
+    failed = project.run("build", "release", "--release", "1.0.0", "--cr", "CR-001", "--out-dir", str(project.root / "rel"),
                          "--junit", str(project.junit), "--write")
 
     assert dry.exit_code == 0 and failed.exit_code == 1

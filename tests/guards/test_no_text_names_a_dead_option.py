@@ -96,3 +96,36 @@ def test_every_named_option_exists(source: str, module: str,
             f"{source} runs `{module} {' '.join(cmd)} {opt}`, "
             f"but that command has no {opt}"
         )
+
+
+#: Names that were renamed or split; the option guard above skips a command it cannot run,
+#: and cannot see `item transition ID` that lost its state.
+DEAD_FORMS = {
+    "--offline-mode": "`verify soup --on-unreachable`",
+    "offline_mode": "`on_unreachable`",
+    "build release --version": "`build release --release`",
+    "current_status": "`status` in `item transitions`",
+}
+DEAD_TRANSITION = re.compile(r"item transition\s+(?:[A-Z]+-(?:NNN|\d+)|<?ID>?|ID)(?=\s*(?:[`.,)\n]|$))")
+
+
+def _text_files() -> list[Path]:
+    globs = SEARCH + ("docs/skills/**/*.md", "medharness/**/*.py", "dhfkit/templates/**/*",
+                      "DHF/**/*.yaml", ".github/workflows/*.yml")
+    return [p for g in globs for p in sorted(ROOT.glob(g))
+            if p.is_file() and "reviews" not in p.parts and p != Path(__file__)]
+
+
+def test_no_text_uses_a_name_that_was_renamed() -> None:
+    for path in _text_files():
+        text = path.read_text(encoding="utf-8")
+        for dead, now in DEAD_FORMS.items():
+            assert dead not in text, f"{path.relative_to(ROOT)} names `{dead}`; it is {now}"
+
+
+def test_no_text_runs_item_transition_without_a_state() -> None:
+    for path in _text_files():
+        for line in path.read_text(encoding="utf-8").splitlines():
+            assert not DEAD_TRANSITION.search(line), (
+                f"{path.relative_to(ROOT)}: `{line.strip()}` queries with `item transition`; "
+                f"the query is `item transitions ID`")

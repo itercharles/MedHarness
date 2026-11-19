@@ -68,7 +68,7 @@ accepted_vulns:
 
 Both keys are required; without a `rationale` the vulnerability keeps blocking. A new vulnerability in the same package still fails, because acceptance is per ID. Accepted ones stay visible in the output.
 
-**No network.** `verify soup` calls `api.osv.dev` and fails if it cannot. If scanning happens elsewhere, `--offline-mode warn` lets it pass and records the outage in the answer.
+**No network.** `verify soup` calls `api.osv.dev` and fails if it cannot. If scanning happens elsewhere, `--on-unreachable warn` lets it pass and records the outage in the answer.
 
 ## 3. Release it: the SBOM
 

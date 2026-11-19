@@ -126,7 +126,7 @@ Never invoke `build plan` or `build code` — the shipped CI recipe runs neither
 medharness --dhf DHF verify dhf
 medharness --dhf DHF verify tests --junit test-results
 medharness --dhf DHF verify soup
-medharness --dhf DHF build release --version 1.0.0 --out-dir release
+medharness --dhf DHF build release --release 1.0.0 --out-dir release
 ```
 
 No model credentials, no `claude` CLI, no network calls to any model provider.

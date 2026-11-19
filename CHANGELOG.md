@@ -17,6 +17,10 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 - `item list --type` with an unknown code (case-sensitive) exits 1 and lists the valid codes. It answered with an empty list.
 - `item transition`, with or without a state, on an item whose type has no lifecycle says so (`SRS has no lifecycle`) instead of "state 'None'" or an empty list.
 - `init` refuses `--dhf`, which it used to ignore.
+- **Breaking:** `item transition ID` without a state, which only queried, is now `item transitions ID`; `item transition ID STATE` requires its state. The query answers `{id, status, transitions}`, where it answered `item_id` and `current_status`.
+- **Breaking:** `build release --version VERSION` is now `build release --release VERSION`, the name every command that takes a release already used. `--version` is the tool's own flag only.
+- **Breaking:** `verify soup --offline-mode [fail|warn]` is now `--on-unreachable [fail|warn]`, same values and default.
+- **Breaking:** `item list --brief` answers `{id, type, title, status, all_linked_ids}`: `links` is now `all_linked_ids`, and `status` is added.
 - `verify tests --help` says when `--junit` can be left out (`--cr`, when no item in the CR needs a test).
 
 ### Fixed
