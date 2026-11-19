@@ -113,7 +113,7 @@ def register(main):
                   help="Print the stage's instructions, with this CR's DHF context, for an "
                        "agent that is already running, instead of starting a model.")
     @click.pass_context
-    def change_plan(ctx: click.Context, cr_id: str, pr_number: int | None, since_ref: str | None,
+    def build_plan(ctx: click.Context, cr_id: str, pr_number: int | None, since_ref: str | None,
                     print_prompt: bool) -> None:
         """Draft the DHF item cascade and impact analysis for a CR, with a model.
 
@@ -164,7 +164,7 @@ def register(main):
                   help="Print the stage's instructions, with this CR's DHF context, for an "
                        "agent that is already running, instead of starting a model.")
     @click.pass_context
-    def change_implement(ctx: click.Context, cr_id: str, pr_number: int | None,
+    def build_code(ctx: click.Context, cr_id: str, pr_number: int | None,
                          checks: tuple[str, ...], since_ref: str | None, print_prompt: bool) -> None:
         """Write the code and tests for a CR's approved design, with a model.
 
@@ -206,7 +206,7 @@ def register(main):
     @click.option("--cr", "cr_ids", multiple=True, metavar="CR_ID",
                   help="A CR to include (repeatable). Default: every completed CR "
                        "not yet in a release.")
-    @click.option("--dependency-file", "manifest_paths", multiple=True,
+    @click.option("--dependency-file", "dependency_files", multiple=True,
                   type=click.Path(exists=True, dir_okay=False, path_type=Path), metavar="PATH",
                   help="Dependency file whose packages the BOM lists beside the "
                        "SOUP register (repeatable).")
@@ -217,7 +217,7 @@ def register(main):
                   help="Format of the bundled specifications. PDF needs "
                        "medharness[docs] plus cairo/pango.")
     @click.pass_context
-    def build_release_cmd(ctx, version, out_dir, write, cr_ids, manifest_paths,
+    def build_release_cmd(ctx, version, out_dir, write, cr_ids, dependency_files,
                           junit_paths, doc_format) -> None:
         """Build everything one release needs (IEC 62304 §9).
 
@@ -236,7 +236,7 @@ def register(main):
 
         result = build_release(
             ctx.obj["dhf"], version, out_dir,
-            manifest_paths=list(manifest_paths), cr_ids=list(cr_ids),
+            dependency_files=list(dependency_files), cr_ids=list(cr_ids),
             junit_paths=collect_junit_paths(junit_paths),
             doc_format=doc_format, write=write,
         )
@@ -253,7 +253,7 @@ def register(main):
         rel_note = f", recorded as {result['rel_id']}" if result["rel_id"] else " (dry run)"
         click.echo(
             f"OK build release {version}{rel_note}: {len(result['cr_ids'])} CR(s), "
-            f"{len(result['artifacts'])} file(s) in {out_dir}.",
+            f"{len(result['files'])} file(s) in {out_dir}.",
             err=True,
         )
 
@@ -324,11 +324,11 @@ def register(main):
             sys.exit(1)
 
     @build.command("soup")
-    @click.option("--dependency-file", "manifest_paths", multiple=True,
+    @click.option("--dependency-file", "dependency_files", multiple=True,
                   type=click.Path(exists=True, dir_okay=False, path_type=Path),
                   metavar="PATH", help="Dependency file to read (repeatable). Auto-discovers when omitted.")
     @click.pass_context
-    def build_soup(ctx, manifest_paths) -> None:
+    def build_soup(ctx, dependency_files) -> None:
         """Reconcile SOUP items from the project's dependency manifests.
 
         IEC 62304 §8.1.2 wants the SOUP a release ships to be the SOUP it
@@ -338,7 +338,7 @@ def register(main):
         """
         from medharness.services.soup_sync import sync_soup_items
 
-        result = sync_soup_items(ctx.obj["dhf"], list(manifest_paths))
+        result = sync_soup_items(ctx.obj["dhf"], list(dependency_files))
         click.echo(json.dumps(result))
         click.echo(
             f"{'FAIL' if result['errors'] else 'OK'} build soup: {len(result['items_created'])} created, "

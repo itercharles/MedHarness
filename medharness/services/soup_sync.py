@@ -523,7 +523,7 @@ def diff_against_dhf(
 
 def collect_manifest_packages(
     dhf: Path,
-    manifest_paths: list[Path] | None = None,
+    dependency_files: list[Path] | None = None,
 ) -> tuple[list[dict], list[str], list[str]]:
     """Every package the project's manifests resolve, deduplicated by name.
 
@@ -537,7 +537,7 @@ def collect_manifest_packages(
     project_dir = dhf.parent
 
     # 1. Explicit manifest paths
-    for path in manifest_paths or []:
+    for path in dependency_files or []:
         try:
             pkgs = _dispatch_parser(path)
             packages.extend(pkgs)
@@ -548,7 +548,7 @@ def collect_manifest_packages(
             errors.append(f"Failed to parse {path}: {exc}")
 
     # 2. soup-sources.yaml (when no explicit sources given)
-    if not manifest_paths:
+    if not dependency_files:
         if config_file(dhf, "soup-sources.yaml"):
             src_pkgs, src_errors = load_soup_sources(dhf, project_dir)
             packages.extend(src_pkgs)
@@ -580,18 +580,18 @@ def collect_manifest_packages(
     return packages, manifests_parsed, errors
 
 
-def sync_soup_items(dhf: Path, manifest_paths: list[Path]) -> dict:
+def sync_soup_items(dhf: Path, dependency_files: list[Path]) -> dict:
     """Parse manifests, diff against DHF SOUP items, and write the changes.
 
     Source priority (highest wins on name collision):
-    1. Explicit ``manifest_paths``
+    1. Explicit ``dependency_files``
     2. ``DHF/config/soup-sources.yaml``
     3. Auto-discovery of manifest files in the project root (when all above
        are empty and no sources file is present)
 
     Returns what was written and what could not be reconciled; any ``errors`` fail the command.
     """
-    packages, manifests_parsed, errors = collect_manifest_packages(dhf, list(manifest_paths))
+    packages, manifests_parsed, errors = collect_manifest_packages(dhf, list(dependency_files))
 
     soup_items: list[dict] = []
     store = None

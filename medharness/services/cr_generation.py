@@ -33,13 +33,12 @@ from medharness.services.stage_run import (
     _MAX_CODE_REVIEW_CYCLES,
     _MAX_DESIGN_REVIEW_CYCLES,
     _augment_review_prompt,
-    _begin_step,
     _build_review_result,
-    _finish_step,
     _format_error_lines,
     _parse_review_data,
     _read_design_review_data,
     _review_not_approved,
+    _step,
     _warning,
     design_review_file,
 )
@@ -67,9 +66,8 @@ def _code_paths(dhf_path: Path, repo_root: Path) -> tuple[str, ...]:
 
 
 def _validate_design(run: Run, name: str, items_changed: dict) -> list[dict]:
-    step, perf = _begin_step(name)
     errors = design_validation.validate_generate_dhf(run.cr_id, run.dhf_path, items_changed, run.code_changed())
-    run.steps.append(_finish_step(step, perf, "failed" if errors else "ok"))
+    run.steps.append(_step(name, "failed" if errors else "ok"))
     return errors
 
 
@@ -113,7 +111,6 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None,
 
     feedback = _pr_feedback(pr_number, run.steps, run.warnings) if pr_number else None
     if feedback is not None:
-        prompt_step, prompt_perf = _begin_step("prepare_revision_prompt")
         prompt = (
             f"Read the DHF items in {dhf_path.resolve().name}/ related to {cr_id}, "
             f"then revise them based on the following pull request review feedback. "
@@ -124,10 +121,10 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None,
             f"Review feedback:\n{feedback['prompt_text']}"
         )
         prompt = _enrich_with_plan_context(prompt, cr_id, dhf_path, run.warnings)
+        run.steps.append(_step("prepare_revision_prompt", "ok"))
     else:
-        prompt_step, prompt_perf = _begin_step("prepare_generation_prompt")
         prompt = _assemble_generate_dhf_prompt(cr_id, dhf_path, run.warnings)
-    run.steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
+        run.steps.append(_step("prepare_generation_prompt", "ok"))
 
     run.call("run_initial_generation", prompt, design_llm, critical=True, resume=prior_session)
     if run.critical_failed:
@@ -230,11 +227,10 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None,
         })
         items_changed = None
     if not errors:
-        impact_step, impact_perf = _begin_step("record_design_impact")
         not_recorded = _record_design_impact_in_cr(cr_id, dhf_path, items_changed)
         if not_recorded:
             run.warnings.append(_warning("affected_items_not_recorded", not_recorded))
-        run.steps.append(_finish_step(impact_step, impact_perf, "warning" if not_recorded else "ok"))
+        run.steps.append(_step("record_design_impact", "warning" if not_recorded else "ok"))
 
     if run.session_id and pr_number:
         put_session(pr_number, run.session_id)
@@ -253,10 +249,9 @@ def _run_checks(run: Run, checks: tuple[str, ...], develop_llm) -> list[dict]:
     """Run the `--check` commands, sending a failure back to the model for a fix."""
     results: list[dict] = []
     for attempt in range(_MAX_CHECK_FIX_CYCLES + 1):
-        step, perf = _begin_step("run_checks")
         results = check_runner.run_checks(run.repo_root, checks)
         failed = [c for c in results if not c["passed"]]
-        run.steps.append(_finish_step(step, perf, "failed" if failed else "ok"))
+        run.steps.append(_step("run_checks", "failed" if failed else "ok"))
         if not failed or attempt == _MAX_CHECK_FIX_CYCLES:
             break
         report = "\n\n".join(f"`{c['command']}` exited {c['exit_code']}:\n{c['output']}" for c in failed)
@@ -290,26 +285,22 @@ def generate_code(
     # from reconciliation checks that require a non-empty created_ids list.
     feedback = _pr_feedback(pr_number, run.steps, run.warnings) if pr_number else None
     if feedback is None:
-        preflight_step, preflight_perf = _begin_step("preflight_traceability")
         try:
             preflight_errors = design_validation.validate_dhf_structure(dhf_path)
         except Exception:
             preflight_errors = []
-        run.steps.append(_finish_step(preflight_step, preflight_perf, "warning" if preflight_errors else "ok"))
+        run.steps.append(_step("preflight_traceability", "warning" if preflight_errors else "ok"))
         for e in preflight_errors:
-            run.warnings.append(_warning("preflight_traceability", f"{e['issue']} Fix: {e['fix']}",
-                                         {"field": e["field"]}))
+            run.warnings.append(_warning("preflight_traceability", f"{e['issue']} Fix: {e['fix']}"))
 
     if feedback is not None:
-        prompt_step, prompt_perf = _begin_step("prepare_revision_prompt")
         prompt = (
             f"Read the implementation on this branch related to {cr_id}, "
             f"then revise it based on the following pull request review feedback.\n\n"
             f"Review feedback:\n{feedback['prompt_text']}"
         ) + checks_section(checks)
-        run.steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
+        run.steps.append(_step("prepare_revision_prompt", "ok"))
     else:
-        prompt_step, prompt_perf = _begin_step("prepare_generation_prompt")
         prompt = _assemble_develop_prompt(cr_id, dhf_path=dhf_path, warnings=run.warnings, checks=checks,
                                           since_ref=since_ref)
         diff = git.compute_diff(run.repo_root, since_ref, *_code_paths(dhf_path, run.repo_root))
@@ -328,7 +319,7 @@ def generate_code(
                     f"_(diff truncated at {MAX_DIFF_CHARS} chars — "
                     "remaining changes not shown)_\n"
                 )
-        run.steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
+        run.steps.append(_step("prepare_generation_prompt", "ok"))
 
     run.call("run_initial_generation", prompt, develop_llm, critical=True, resume=prior_session)
     if run.critical_failed:

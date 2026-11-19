@@ -160,8 +160,6 @@ An item is its file's fields plus `type` (the item type's code), `file_path`, an
 | Field | Type | Meaning |
 |---|---|---|
 | `name` | string | The step, e.g. `run_initial_generation`, `validate_initial`, `run_review` |
-| `started_at` | string | When it started, ISO 8601 UTC |
-| `elapsed_ms` | integer | How long it took |
 | `outcome` | string | `ok`, `warning` or `failed` |
 
 `RunWarning`:
@@ -170,7 +168,6 @@ An item is its file's fields plus `type` (the item type's code), `file_path`, an
 |---|---|---|
 | `code` | string | A stable identifier, e.g. `agent_commits_undone` |
 | `message` | string | The warning, phrased for a reader |
-| `details` | object or null | Extra facts, when the warning has any |
 
 `RunError`:
 
@@ -179,7 +176,6 @@ An item is its file's fields plus `type` (the item type's code), `file_path`, an
 | `field` | string | What was wrong, as a dotted path such as `traceability.dangling.satisfies` |
 | `issue` | string | The problem, phrased for a reader |
 | `fix` | string | What to do about it |
-| `code` | string | A stable identifier derived from `field` |
 
 `PlanArtifacts`:
 
@@ -274,7 +270,7 @@ An item is its file's fields plus `type` (the item type's code), `file_path`, an
 | `version` | string | The version released |
 | `cr_ids` | list of strings | The completed CRs it includes |
 | `rel_id` | string or null | The REL item recorded; null without `--write` or when a check failed |
-| `artifacts` | list of strings | Files written under `--out-dir`, relative to it |
+| `files` | list of strings | Files written under `--out-dir`, relative to it |
 | `errors` | list of strings | What blocked the release; any exits 1, and a failing release still writes its evidence |
 | `warnings` | list of strings | What it noticed without blocking, such as a component with no purl |
 

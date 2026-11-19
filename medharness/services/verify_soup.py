@@ -112,7 +112,7 @@ def soup_gate(
     dhf_path: Path,
     *,
     on_unreachable: str = "fail",
-    manifest_paths: list[Path] | None = None,
+    dependency_files: list[Path] | None = None,
     strict: bool = False,
     query: Callable[[list[dict]], list[dict]] = osv_querybatch,
     lookup: Callable[[str], dict] = osv_vuln,
@@ -162,7 +162,7 @@ def soup_gate(
     adapter = open_store(dhf_path)
     all_items = adapter.list_items()
     soup_items = [it for it in all_items if it.get("type") == "SOUP"]
-    drift = _soup_drift(dhf_path, soup_items, manifest_paths)
+    drift = _soup_drift(dhf_path, soup_items, dependency_files)
     drift_blocks = strict and bool(drift["undocumented"] or drift["misversioned"])
 
     checkable: list[dict] = []
@@ -325,7 +325,7 @@ def soup_gate(
 def _soup_drift(
     dhf_path: Path,
     soup_items: list[dict],
-    manifest_paths: list[Path] | None,
+    dependency_files: list[Path] | None,
 ) -> dict:
     """The register against the manifests, read-only.
 
@@ -338,7 +338,7 @@ def _soup_drift(
     )
 
     packages, _parsed, errors = collect_manifest_packages(
-        dhf_path, list(manifest_paths or [])
+        dhf_path, list(dependency_files or [])
     )
     diff = diff_against_dhf(packages, soup_items)
     return {

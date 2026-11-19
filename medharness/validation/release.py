@@ -234,8 +234,8 @@ def failing_release_writes_its_evidence(root: Path) -> None:
     edit(root, "CR-001", status="design")
     report = _refused(root, args=("--cr", "CR-001", "--write"))
     check((root / "out" / "1.0.0" / "evidence-manifest.json").is_file(), "evidence-manifest.json is missing")
-    check(any(a.startswith("specifications/SRS_Specification_") for a in report["artifacts"]),
-          f"no specification in {report['artifacts']}")
+    check(any(a.startswith("specifications/SRS_Specification_") for a in report["files"]),
+          f"no specification in {report['files']}")
 
 
 def manifest_hashes_the_test_results(root: Path) -> None:

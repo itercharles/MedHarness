@@ -158,20 +158,20 @@ class TestGetPrFeedback:
         with self._gh([review], [comment]):
             result = _get_pr_feedback(42)
         assert json.loads(result["prompt_text"]) == {"reviews": [review], "comments": [comment]}
-        assert result["diagnostics"]["reviews_count"] == 1
-        assert result["diagnostics"]["comments_count"] == 1
+        assert result["diagnostics"]["reviews"] == 1
+        assert result["diagnostics"]["comments"] == 1
         assert result["warnings"] == []
 
     def test_an_approval_asks_for_nothing(self):
         """The design approval that starts develop is a review, not a request."""
         with self._gh([{"id": 1, "state": "APPROVED", "author_association": "MEMBER", "commit_id": "c2", "body": ""}], []):
             result = _get_pr_feedback(42)
-        assert result["diagnostics"]["reviews_count"] == 0
+        assert result["diagnostics"]["reviews"] == 0
 
     def test_a_request_on_an_earlier_commit_is_not_feedback(self):
         with self._gh([{"id": 1, "state": "CHANGES_REQUESTED", "author_association": "MEMBER", "commit_id": "c1", "body": "x"}], []):
             result = _get_pr_feedback(42)
-        assert result["diagnostics"]["reviews_count"] == 0
+        assert result["diagnostics"]["reviews"] == 0
 
     def test_a_comment_review_counts_when_it_says_something(self):
         said = {"id": 1, "state": "COMMENTED", "author_association": "MEMBER", "commit_id": "c2", "body": ""}
@@ -187,21 +187,20 @@ class TestGetPrFeedback:
         with self._gh([stranger], [{"pull_request_review_id": 1, "body": "please"}]):
             result = _get_pr_feedback(42)
         assert "evil.example" not in result["prompt_text"]
-        assert result["diagnostics"]["reviews_count"] == 0
+        assert result["diagnostics"]["reviews"] == 0
         assert [w["code"] for w in result["warnings"]] == ["untrusted_reviews_ignored"]
 
-    def test_a_gh_failure_carries_its_reason(self):
+    def test_a_gh_failure_is_a_warning_and_no_feedback(self):
         with patch(self.GH, return_value=(1, "HTTP 404: Not Found")):
             result = _get_pr_feedback(99)
-        assert result["diagnostics"]["comments_status"] == "gh_error"
-        assert result["diagnostics"]["comments_error"] == "HTTP 404: Not Found"
+        assert result["diagnostics"] == {"comments": 0, "reviews": 0}
         assert any(w["code"] == "github_comments_unavailable" and "404" in w["message"]
                    for w in result["warnings"])
 
-    def test_invalid_json_returns_error_payload(self):
+    def test_invalid_json_is_a_warning_and_no_feedback(self):
         with patch(self.GH, return_value=(0, "{not-json")):
             result = _get_pr_feedback(1)
-        assert result["diagnostics"]["comments_status"] == "decode_error"
+        assert result["diagnostics"] == {"comments": 0, "reviews": 0}
         assert any("decoded" in w["message"] for w in result["warnings"])
 
 
@@ -463,7 +462,7 @@ class TestGenerateDhf:
             mock_claude.return_value = (0, "", "")
             mock_fb.return_value = {
                 "prompt_text": "some review feedback",
-                "diagnostics": {"attempted": True, "comments_status": "ok", "comments_count": 1, "reviews_count": 0},
+                "diagnostics": {"comments": 1, "reviews": 0},
                 "warnings": [],
             }
             generate_dhf("CR-056", dhf, pr_number=12)
@@ -620,7 +619,7 @@ class TestGenerateCode:
             mock_claude.return_value = (0, "", "")
             mock_fb.return_value = {
                 "prompt_text": '{"comments": [], "reviews": []}',
-                "diagnostics": {"attempted": True, "comments_status": "ok", "reviews_status": "ok", "comments_count": 1, "reviews_count": 0},
+                "diagnostics": {"comments": 1, "reviews": 0},
                 "warnings": [],
             }
             generate_code("CR-023", dhf, pr_number=7)
@@ -693,7 +692,7 @@ class TestGenerateCode:
 
         with patch("medharness.services.llm._run_claude", side_effect=_stub), \
              patch("medharness.services.pr_feedback._get_pr_feedback",
-                   return_value={"prompt_text": "", "diagnostics": {"comments_count": 0, "reviews_count": 0}, "warnings": []}):
+                   return_value={"prompt_text": "", "diagnostics": {"comments": 0, "reviews": 0}, "warnings": []}):
             generate_code("CR-030", dhf, pr_number=99)
         assert all(s == "" for s in resume_sessions_captured[:1]), (
             f"initial develop step must start fresh; got resume_session={resume_sessions_captured[0]!r}"
@@ -706,7 +705,7 @@ class TestGenerateCode:
         posted_bodies: list[str] = []
         with patch("medharness.services.llm._run_claude", return_value=(0, "**Verdict:** Approved\n", "")), \
              patch("medharness.services.pr_feedback._get_pr_feedback",
-                   return_value={"prompt_text": "", "diagnostics": {"comments_count": 0, "reviews_count": 0}, "warnings": []}), \
+                   return_value={"prompt_text": "", "diagnostics": {"comments": 0, "reviews": 0}, "warnings": []}), \
              patch("medharness.services.pr_feedback.post_pr_comment",
                    side_effect=lambda pr, body, **kw: posted_bodies.append(body) or "url") as mock_post, \
              patch("medharness.services.git.collect_path_changes", return_value={"created": [], "updated": [], "deleted": []}), \

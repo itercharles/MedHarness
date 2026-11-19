@@ -400,7 +400,7 @@ def _auto_collect_crs(dhf: Path) -> list[str]:
 # BOM collection
 # ---------------------------------------------------------------------------
 
-def _collect_bom(dhf: Path, manifest_paths: list[Path]) -> tuple[dict, list[str]]:
+def _collect_bom(dhf: Path, dependency_files: list[Path]) -> tuple[dict, list[str]]:
     """Collect SOUP items and manifest packages into a software BOM.
 
     Returns ``(bom_dict, errors)`` where errors is non-empty when any manifest
@@ -422,7 +422,7 @@ def _collect_bom(dhf: Path, manifest_paths: list[Path]) -> tuple[dict, list[str]
             })
 
     manifest_packages: list[dict] = []
-    for path in manifest_paths:
+    for path in dependency_files:
         # Support is decided by filename, not by catching the parser's error:
         # a malformed package.json raises JSONDecodeError, which is a ValueError,
         # and reporting that as "unsupported format" would send a reader looking
@@ -492,7 +492,7 @@ def _refused(version: str, cr_ids: list[str], errors: list[str],
 def build_release_baseline(
     dhf: Path,
     version: str,
-    manifest_paths: list[Path],
+    dependency_files: list[Path],
     cr_ids: list[str],
     out_dir: Path,
 ) -> dict:
@@ -519,7 +519,7 @@ def build_release_baseline(
         return _refused(version, cr_ids, errors, anomalies)
 
     # Collect BOM — propagate any manifest errors so an incomplete BOM fails loudly
-    bom, bom_errors = _collect_bom(dhf, manifest_paths)
+    bom, bom_errors = _collect_bom(dhf, dependency_files)
     errors.extend(bom_errors)
 
     # Generate release notes
@@ -633,7 +633,7 @@ def build_release(
     version: str,
     out_dir: Path,
     *,
-    manifest_paths: list[Path] = (),
+    dependency_files: list[Path] = (),
     cr_ids: list[str] = (),
     junit_paths: list[Path] = (),
     doc_format: str = "html",
@@ -652,7 +652,7 @@ def build_release(
     # Every requirement, not only those the included CRs touched: a release with no CR in it
     # would otherwise ship on no test evidence at all.
     tests = ci_test_coverage_gate(dhf, list(junit_paths), strict=True)
-    baseline = build_release_baseline(dhf, version, list(manifest_paths), list(cr_ids), out_dir)
+    baseline = build_release_baseline(dhf, version, list(dependency_files), list(cr_ids), out_dir)
     # Last, so its manifest hashes the baseline's files as well as its own.
     manifest = build_evidence_bundle(
         dhf, out_dir, version=version, junit_paths=list(junit_paths), doc_format=doc_format,
@@ -687,7 +687,7 @@ def build_release(
         "version": version,
         "cr_ids": baseline["cr_ids"],
         "rel_id": rel_id,
-        "artifacts": [f["path"] for f in manifest["files"]],
+        "files": [f["path"] for f in manifest["files"]],
         "errors": errors,
         "warnings": warnings,
     }

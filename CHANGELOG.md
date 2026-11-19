@@ -22,6 +22,8 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 - **Breaking:** `verify soup --offline-mode [fail|warn]` is now `--on-unreachable [fail|warn]`, same values and default.
 - **Breaking:** `item list --brief` answers `{id, type, title, status, all_linked_ids}`: `links` is now `all_linked_ids`, and `status` is added.
 - `verify tests --help` says when `--junit` can be left out (`--cr`, when no item in the CR needs a test).
+- **Breaking:** `build release` lists the files it wrote under `files`, not `artifacts`, so the key means one thing: in `build plan` and `build code`, `artifacts` is still what the run changed.
+- **Breaking:** `build plan` and `build code` no longer report `steps[].started_at`, `steps[].elapsed_ms`, `errors[].code` (it was `field` lower-cased) or `warnings[].details`. A failed model call's `claude_step_failed` warning now carries the tool's output in its `message`.
 
 ### Fixed
 - `verify tests` no longer prints each warning twice on stderr when it has no JUnit evidence.

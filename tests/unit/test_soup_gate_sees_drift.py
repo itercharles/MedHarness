@@ -39,7 +39,7 @@ def _gate(dhf: Path, **kw):
     """No network: the drift half must work with osv.dev unreachable."""
     with patch("urllib.request.urlopen", side_effect=OSError("offline")):
         return soup_gate(dhf, on_unreachable="warn",
-                         manifest_paths=[dhf.parent / "requirements.txt"], **kw)
+                         dependency_files=[dhf.parent / "requirements.txt"], **kw)
 
 
 class TestItSeesTheRegisterDrift:

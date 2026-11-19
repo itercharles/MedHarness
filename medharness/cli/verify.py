@@ -204,7 +204,7 @@ def register(main):
             raise click.exceptions.Exit(1)
 
     @verify.command("soup")
-    @click.option("--dependency-file", "manifest_paths", multiple=True,
+    @click.option("--dependency-file", "dependency_files", multiple=True,
                   type=click.Path(exists=True, dir_okay=False, path_type=Path),
                   metavar="PATH",
                   help="Dependency file to compare the register against (repeatable). "
@@ -218,7 +218,7 @@ def register(main):
     @click.pass_context
     def verify_soup(
         ctx: click.Context,
-        manifest_paths: tuple[Path, ...],
+        dependency_files: tuple[Path, ...],
         strict: bool,
         on_unreachable: str,
     ) -> None:
@@ -246,7 +246,7 @@ def register(main):
 
         effective_dhf = ctx.obj["dhf"]
         result = soup_gate(effective_dhf, on_unreachable=on_unreachable,
-                           manifest_paths=list(manifest_paths), strict=strict)
+                           dependency_files=list(dependency_files), strict=strict)
         emit(result)
 
         for entry in details(result).get("accepted", []):
