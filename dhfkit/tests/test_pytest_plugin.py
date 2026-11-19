@@ -123,7 +123,7 @@ def test_the_properties_are_written_without_a_warning_under_either_junit_family(
             pass
     """)
     xml = pytester.path / "result.xml"
-    result = pytester.runpytest(f"--junit-xml={xml}", "-o", f"junit_family={family}")
+    result = pytester.runpytest_subprocess(f"--junit-xml={xml}", "-o", f"junit_family={family}")
     result.assert_outcomes(passed=1, warnings=0)
 
     assert _properties(xml, "test_example").get("medharness.links") == "SRS-001"

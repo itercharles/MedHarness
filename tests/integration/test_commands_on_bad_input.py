@@ -174,7 +174,7 @@ class TestBuildArguments:
     def test_the_version_of_a_release_is_named_release_not_version(self, project: Path) -> None:
         result = _run(project, "build", "release", "--version", "1.0.0", "--out-dir", str(project / "r"),
                       "--junit", str(project / "DHF"))
-        assert result.exit_code == 2 and "No such option: --version" in result.stderr
+        assert result.exit_code == 2 and "No such option" in result.stderr and "--version" in result.stderr
         assert not (project / "r").exists()
 
     def test_a_release_without_write_leaves_the_dhf_alone(self, project: Path) -> None:

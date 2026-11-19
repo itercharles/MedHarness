@@ -426,4 +426,4 @@ def test_the_old_name_of_on_unreachable_is_refused(tmp_path: Path) -> None:
     dhf.mkdir()
     result = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", "soup", "--offline-mode", "warn"])
     assert result.exit_code == 2 and result.stdout == ""
-    assert "No such option: --offline-mode" in result.stderr
+    assert "No such option" in result.stderr and "--offline-mode" in result.stderr
