@@ -11,7 +11,17 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.82.0] — 2026-11-20
+
+The interface cleaned up while nobody depends on it yet, input the tool ignored now refused, and a page on how far to trust the checks. Breaking.
+
+### Added
+- `docs/trust.md`, and a README section: what the checks guarantee, which seeded omissions they stop (a table generated from the seeded-omission set), and what the reviewer still reads in every change request.
+
 ### Changed
+- `docs/soup.md`, `docs/configuration.md`, `docs/adopting.md`, `docs/ai-workflow.md` and `docs/ci.md` are shorter and in the order a reader does things; what only an agent needs is left to the code and `interface.md`. Their commands, examples and linked anchors are unchanged.
+- The adoption table lists the CI recipe's `change-check` job as its own step.
+- A roadmap review, `docs/reviews/2026-11-19-positioning-gaps-plan.md`: positioning, gaps and ordered tasks.
 - `item update` refuses `type`, `doc_type`, `file_path` and `timestamp`, as it refuses a changed `id`. Before, they were written into the item, and `file_path` wrote a copy of it into the current directory.
 - `item create` refuses an `id` in `--data`: IDs are assigned. It was silently dropped.
 - `item list --type` with an unknown code (case-sensitive) exits 1 and lists the valid codes. It answered with an empty list.
@@ -27,13 +37,6 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ### Fixed
 - `verify tests` no longer prints each warning twice on stderr when it has no JUnit evidence.
-
-## [0.81.1] — 2026-11-19
-
-### Changed
-- `docs/soup.md`, `docs/configuration.md`, `docs/adopting.md`, `docs/ai-workflow.md` and `docs/ci.md` are shorter and in the order a reader does things; what only an agent needs is left to the code and `interface.md`. Their commands, examples and linked anchors are unchanged.
-- The adoption table lists the CI recipe's `change-check` job as its own step.
-- A roadmap review, `docs/reviews/2026-11-19-positioning-gaps-plan.md`: positioning, gaps and ordered tasks.
 
 ## [0.81.0] — 2026-11-13
 
